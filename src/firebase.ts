@@ -5,14 +5,40 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+
+export let cachedAccessToken: string | null = null;
+export let isSigningIn = false;
+
+export const signInWithGoogle = async () => {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
+    return result;
+  } catch (error) {
+    console.error('Sign in error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const logout = async () => {
+  await auth.signOut();
+  cachedAccessToken = null;
+};
+
 export const db = initializeFirestore(app, {
   // @ts-ignore
   experimentalForceLongPolling: true,
   localCache: memoryLocalCache()
 }, firebaseConfig.firestoreDatabaseId);
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
 
 export enum OperationType {
   CREATE = 'create',
