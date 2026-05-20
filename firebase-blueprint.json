@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "nombre": { "type": "string" },
+        "email": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["cliente", "prestador", "soberano"] },
+        "verificado": { "type": "boolean" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "bio_memoria": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["uid", "nombre", "tipo"]
+    },
+    "Contract": {
+      "title": "Contract",
+      "description": "Escrow contract data",
+      "type": "object",
+      "properties": {
+        "participantes": {
+          "type": "object",
+          "properties": {
+            "cliente_id": { "type": "string" },
+            "prestador_id": { "type": "string" }
+          }
+        },
+        "estado": { "type": "string", "enum": ["solicitado", "bloqueado", "en_curso", "completado", "disputa"] },
+        "datos_financieros": {
+          "type": "object",
+          "properties": {
+            "monto_total": { "type": "number" },
+            "codigo_liberacion": { "type": "string" },
+            "timestamp": { "type": "number" }
+          }
+        },
+        "metadatos": {
+          "type": "object",
+          "properties": {
+            "categoria": { "type": "string" },
+            "fecha_agendada": { "type": "number" }
+          }
+        }
+      },
+      "required": ["participantes", "estado", "datos_financieros"]
+    },
+    "HugoLog": {
+      "title": "HugoLog",
+      "description": "Logs of Hugo's interactions",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "number" },
+        "usuario_id": { "type": "string" },
+        "interaccion": {
+          "type": "object",
+          "properties": {
+            "input": { "type": "string" },
+            "respuesta": { "type": "string" },
+            "estrategia_propuesta": { "type": "string" }
+          }
+        }
+      },
+      "required": ["timestamp", "usuario_id", "interaccion"]
+    }
+  },
+  "firestore": {
+    "profiles/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "contratos/{contratoId}": {
+      "schema": "Contract",
+      "description": "Escrow contracts"
+    },
+    "logs_hugo/{logId}": {
+      "schema": "HugoLog",
+      "description": "Hugo interaction logs"
+    }
+  }
+}

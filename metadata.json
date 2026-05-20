@@ -1,0 +1,10 @@
+{
+  "name": "Remix: U.go Quantum OS A",
+  "description": "U.go Quantum OS is an AI-orchestrated service management platform connecting clients and service providers.",
+  "requestFramePermissions": [
+    "geolocation",
+    "microphone",
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

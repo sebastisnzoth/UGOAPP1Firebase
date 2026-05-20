@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-quantum-cyan: #00f2ff;
+  --color-quantum-dark: #050505; /* Más oscuro */
+  --color-quantum-card: #0c0c0c; /* Más profundo */
+  --color-quantum-accent: #ff4e00;
+  
+  --radius-quantum: 12px;
+  --radius-quantum-lg: 24px;
+}
+
+@layer base {
+  body {
+    @apply bg-quantum-dark text-white font-sans overflow-hidden antialiased;
+  }
+}
+
+.orb-animation {
+  width: 80px; 
+  height: 80px;
+  background: radial-gradient(circle, #00f2ff 0%, rgba(0, 242, 255, 0.1) 70%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(8px);
+  box-shadow: 0 0 40px rgba(0, 242, 255, 0.4);
+  position: relative;
+}
+
+.orb-animation::after {
+  content: '';
+  position: absolute;
+  inset: 15%;
+  border: 1px solid rgba(0, 242, 255, 0.4);
+  border-radius: 50%;
+  animation: rotate 15s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.glass-panel {
+  @apply bg-quantum-card/60 backdrop-blur-2xl border border-white/5 shadow-2xl;
+}
+
+.quantum-grid {
+  background-image: linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
