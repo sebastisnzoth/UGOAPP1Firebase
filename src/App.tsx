@@ -57,21 +57,25 @@ export default function App() {
         // Sync user profile to Firestore
         const userRef = doc(db, 'profiles', currentUser.uid);
         
-        const docSnap = await getDoc(userRef);
-        if (!docSnap.exists()) {
-          setDoc(userRef, {
-            uid: currentUser.uid,
-            nombre: currentUser.displayName || 'Usuário Quantum',
-            tipo: 'cliente',
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp()
-          }).catch(err => handleFirestoreError(err, OperationType.WRITE, `profiles/${currentUser.uid}`));
-        } else {
-          // Redirección basada en rol al iniciar sesión
-          const role = await getUserRole(currentUser.uid);
-          if (role === 'soberano') setActiveView('admin');
-          else if (role === 'prestador') setActiveView('provider');
-          else setActiveView('map');
+        try {
+          const docSnap = await getDoc(userRef);
+          if (!docSnap.exists()) {
+            setDoc(userRef, {
+              uid: currentUser.uid,
+              nombre: currentUser.displayName || 'Usuário Quantum',
+              tipo: 'cliente',
+              updatedAt: serverTimestamp(),
+              createdAt: serverTimestamp()
+            }).catch(err => handleFirestoreError(err, OperationType.WRITE, `profiles/${currentUser.uid}`));
+          } else {
+            // Redirección basada en rol al iniciar sesión
+            const role = await getUserRole(currentUser.uid);
+            if (role === 'soberano') setActiveView('admin');
+            else if (role === 'prestador') setActiveView('provider');
+            else setActiveView('map');
+          }
+        } catch (err) {
+          console.error("Error fetching user profile:", err);
         }
       } else {
         if (!triedAnon) {

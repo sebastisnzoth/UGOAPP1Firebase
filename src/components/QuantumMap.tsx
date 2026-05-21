@@ -142,8 +142,12 @@ const ProviderMarker = React.memo(({
   onSelectProvider?: (id: string) => void;
   onHire?: (name: string) => void;
 }) => {
-  const lat = Number(provider.latitude ?? provider.lat);
-  const lng = Number(provider.longitude ?? provider.lng);
+  const safeToNumber = (val: any) => {
+    const num = Number(val);
+    return isNaN(num) ? NaN : num;
+  };
+  const lat = safeToNumber(provider.latitude ?? provider.lat);
+  const lng = safeToNumber(provider.longitude ?? provider.lng);
   if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return null;
 
   const icon = useMemo(() => createCustomIcon(provider, isActive), [provider, isActive]);
