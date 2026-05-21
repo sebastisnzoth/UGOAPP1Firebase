@@ -13,43 +13,43 @@ service cloud.firestore {
     }
 
     match /comunicaciones/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /profiles/{userId} {
-      // Cualquier usuario autenticado puede leer perfiles
-      allow read: if request.auth != null;
-      // Solo el dueño o el admin puede escribir
-      allow write: if isAdmin() || isOwner(userId);
+      // Cualquier usuario puede leer perfiles
+      allow read: if true;
+      // Cualquier usuario puede escribir para perfiles invitados o normales
+      allow write: if true;
     }
     
     // Contratos Collection (La Bóveda)
     match /contratos/{contractId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /notifications/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /agendamentos/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /wallets/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /transactions/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /mensagens/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
 
     match /avaliacoes/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }

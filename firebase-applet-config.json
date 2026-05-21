@@ -1,10 +1,9 @@
 {
-  "projectId": "ugoappa1",
-  "appId": "1:71241641437:web:b8a67f9ae5106491f65a34",
-  "apiKey": "AIzaSyAIy7l4lIrE11WD_x9c0kc5pi_Bhwkly-s",
-  "authDomain": "ugoappa1.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-489ba6ee-a3ef-4e52-b0f2-babfa1103af3",
-  "storageBucket": "ugoappa1.firebasestorage.app",
-  "messagingSenderId": "71241641437",
-  "measurementId": ""
+  "apiKey": "AIzaSyB4-F1N4zPs5Kom6MWpqajZcQB0bWDwJpo",
+  "authDomain": "ugoappa1-e9522.firebaseapp.com",
+  "projectId": "ugoappa1-e9522",
+  "storageBucket": "ugoappa1-e9522.firebasestorage.app",
+  "messagingSenderId": "784807284164",
+  "appId": "1:784807284164:web:d6412aead6635ff49be891",
+  "firestoreDatabaseId": "(default)"
 }

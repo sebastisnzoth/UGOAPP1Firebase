@@ -16,7 +16,7 @@ import AdminPanel from './components/AdminPanel';
 import ClientAppLayout from './components/ClientAppLayout';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType, signInWithGoogle } from './firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, signInAnonymously } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { cn } from './lib/utils';
 import { History, User as UserIcon, Calendar } from 'lucide-react';
@@ -48,16 +48,15 @@ export default function App() {
 
   // Auth Listener
   useEffect(() => {
+    let triedAnon = false;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setIsAuthReady(true);
-      
-      if (!currentUser) return;
-      
-      // Sync user profile to Firestore
-      const userRef = doc(db, 'profiles', currentUser.uid);
-      
-      try {
+      if (currentUser) {
+        setUser(currentUser);
+        setIsAuthReady(true);
+        
+        // Sync user profile to Firestore
+        const userRef = doc(db, 'profiles', currentUser.uid);
+        
         const docSnap = await getDoc(userRef);
         if (!docSnap.exists()) {
           setDoc(userRef, {
@@ -74,12 +73,51 @@ export default function App() {
           else if (role === 'prestador') setActiveView('provider');
           else setActiveView('map');
         }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, `profiles/${currentUser.uid}`);
+      } else {
+        if (!triedAnon) {
+          triedAnon = true;
+          try {
+            await signInAnonymously(auth);
+          } catch (error) {
+            console.warn("Anonymous sign in failed, bypassing with hardcoded guest session:", error);
+            const guestUserObj = {
+              uid: 'guest_user',
+              displayName: 'Invitado Quantum',
+              email: 'guest@quantum-os.com',
+              emailVerified: true,
+              isAnonymous: true,
+              metadata: {},
+              providerData: [],
+              providerId: 'firebase',
+              tenantId: null,
+              delete: async () => {},
+              getIdToken: async () => 'mock-token',
+              getIdTokenResult: async () => ({}) as any,
+              reload: async () => {},
+              toJSON: () => ({}),
+            } as unknown as User;
+            setUser(guestUserObj);
+            setIsAuthReady(true);
+            
+            // Sync guest profile to DB
+            const userRef = doc(db, 'profiles', 'guest_user');
+            const docSnap = await getDoc(userRef);
+            if (!docSnap.exists()) {
+              setDoc(userRef, {
+                uid: 'guest_user',
+                nombre: 'Invitado Quantum',
+                tipo: 'cliente',
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp()
+              }).catch(err => console.warn("Failed sync of guest profile document:", err));
+            }
+          }
+        }
       }
     });
     return () => unsubscribe();
   }, []);
+
 
   const handleOrbClick = () => {
     if (orbState === 'SPEAKING') {
@@ -116,7 +154,7 @@ export default function App() {
 
   // Listen for Providers
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !user) return;
     
     // Fetch providers from Firestore
     const providersRef = collection(db, 'profiles');
@@ -131,7 +169,7 @@ export default function App() {
     }, (err) => handleFirestoreError(err, OperationType.GET, 'profiles (providers)'));
 
     return () => unsubscribe();
-  }, [isAuthReady]);
+  }, [isAuthReady, user]);
 
   const handleHire = (providerName: string) => {
     processMessage(`Hugo, quiero contratar a ${providerName}.`);

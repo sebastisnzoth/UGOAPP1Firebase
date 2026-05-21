@@ -1,44 +1,13 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, initializeFirestore, memoryLocalCache } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import firebaseConfig from '@/firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId === '(default)' ? undefined : firebaseConfig.firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('https://www.googleapis.com/auth/calendar');
-
-export let cachedAccessToken: string | null = null;
-export let isSigningIn = false;
-
-export const signInWithGoogle = async () => {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, googleProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (credential?.accessToken) {
-      cachedAccessToken = credential.accessToken;
-    }
-    return result;
-  } catch (error) {
-    console.error('Sign in error:', error);
-    throw error;
-  } finally {
-    isSigningIn = false;
-  }
-};
-
-export const logout = async () => {
-  await auth.signOut();
-  cachedAccessToken = null;
-};
-
-export const db = initializeFirestore(app, {
-  // @ts-ignore
-  experimentalForceLongPolling: true,
-  localCache: memoryLocalCache()
-}, firebaseConfig.firestoreDatabaseId);
 
 export enum OperationType {
   CREATE = 'create',
@@ -88,23 +57,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
-
-// Test connection
-async function testConnection() {
-  try {
-    // Try to get a doc to test connection
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firestore connection verified.");
-  } catch (error: any) {
-    // Only log if it's a real connection issue, ignore permission errors for the test path
-    if (error?.message?.includes('the client is offline')) {
-      console.error("Firestore is offline. Please check your Firebase configuration.");
-    } else if (error?.code === 'permission-denied') {
-      console.warn("Firestore connection test path access denied (expected if rules are strict). Connection is likely OK if no offline error.");
-    } else {
-      console.error("Firestore connection test error:", error);
-    }
-  }
-}
-testConnection();

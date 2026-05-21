@@ -8,7 +8,7 @@ import { cn } from '../lib/utils';
 interface ClientAppLayoutProps {
   user: any;
   state: any;
-  orbState: string;
+  orbState: "IDLE" | "LISTENING" | "THINKING" | "SPEAKING";
   isLiveActive: boolean;
   liveTranscript: string | null;
   handleOrbClick: () => void;
@@ -35,7 +35,11 @@ export default function ClientAppLayout({
 
       {/* Navigation - Right Side (Based on image) */}
       <div className="absolute top-6 right-6 z-40">
-        <DashboardNavigation activeView="AI" onViewChange={() => {}} userId="temp" />
+        <DashboardNavigation 
+          activeView={"map"} 
+          onViewChange={() => {}} 
+          userId={user?.uid || ""} 
+        />
       </div>
 
       {/* Provider Card Overlay - Left Side (Based on image) */}
@@ -59,7 +63,7 @@ export default function ClientAppLayout({
       <div className="absolute bottom-12 left-0 right-0 z-30 flex flex-col items-center pointer-events-none">
         <div className="pointer-events-auto">
           <HugoOrb 
-            state={isLiveActive ? 'LISTENING' : (orbState as any)} 
+            state={isLiveActive ? 'LISTENING' : orbState} 
             onClick={handleOrbClick}
             className="w-20 h-20"
           />
