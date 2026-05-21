@@ -75,7 +75,7 @@ export default function App() {
             else setActiveView('map');
           }
         } catch (err) {
-          console.error("Error fetching user profile:", err);
+          handleFirestoreError(err, OperationType.GET, `profiles/${currentUser.uid}`);
         }
       } else {
         if (!triedAnon) {
@@ -105,15 +105,19 @@ export default function App() {
             
             // Sync guest profile to DB
             const userRef = doc(db, 'profiles', 'guest_user');
-            const docSnap = await getDoc(userRef);
-            if (!docSnap.exists()) {
-              setDoc(userRef, {
-                uid: 'guest_user',
-                nombre: 'Invitado Quantum',
-                tipo: 'cliente',
-                updatedAt: serverTimestamp(),
-                createdAt: serverTimestamp()
-              }).catch(err => console.warn("Failed sync of guest profile document:", err));
+            try {
+              const docSnap = await getDoc(userRef);
+              if (!docSnap.exists()) {
+                await setDoc(userRef, {
+                  uid: 'guest_user',
+                  nombre: 'Invitado Quantum',
+                  tipo: 'cliente',
+                  updatedAt: serverTimestamp(),
+                  createdAt: serverTimestamp()
+                });
+              }
+            } catch (err) {
+              handleFirestoreError(err, OperationType.WRITE, 'profiles/guest_user');
             }
           }
         }
