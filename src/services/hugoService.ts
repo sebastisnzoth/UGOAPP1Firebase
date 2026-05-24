@@ -168,7 +168,7 @@ export const hugoService = {
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } },
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
         },
         systemInstruction: "Você é Hugo, o assistente de voz do U.GO OS. Seja breve, técnico e prestativo.",
         outputAudioTranscription: {},
@@ -219,7 +219,7 @@ export const hugoService = {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Charon' } // Charon sounds more "Quantum/Deep"
+            prebuiltVoiceConfig: { voiceName: 'Puck' } // Changed to Puck for male voice
           }
         }
       }

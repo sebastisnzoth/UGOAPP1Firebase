@@ -13,6 +13,7 @@ import DashboardNavigation from './components/DashboardNavigation';
 import NotificationBell from './components/NotificationBell';
 import ProviderDashboard from './components/ProviderDashboard';
 import AdminPanel from './components/AdminPanel';
+import RoleSelection from './components/RoleSelection';
 import ClientAppLayout from './components/ClientAppLayout';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType, signInWithGoogle } from './firebase';
@@ -27,6 +28,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [providers, setProviders] = useState<any[]>([]);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [activeView, setActiveView] = useState('map'); // 'map' | 'wallet' | 'calendar' | 'history' | 'profile' | 'provider' | 'admin'
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatTarget, setActiveChatTarget] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function App() {
     setIsChatOpen(true);
   };
   
-	  const { state, orbState, processMessage, analyzeMedia, sayWelcome, stopTTS, userLocation, selectProvider } = useHugo();
+	const { state, orbState, processMessage, analyzeMedia, sayWelcome, stopTTS, userLocation, selectProvider } = useHugo();
   const { isActive: isLiveActive, startLive, stopLive, transcript: liveTranscript } = useLiveHugo();
 
   // Watch for SHOW_PROVIDERS action to open drawer
@@ -60,19 +62,25 @@ export default function App() {
         try {
           const docSnap = await getDoc(userRef);
           if (!docSnap.exists()) {
+            // New user, show role selection
+            setShowRoleSelection(true);
             setDoc(userRef, {
               uid: currentUser.uid,
               nombre: currentUser.displayName || 'Usuário Quantum',
-              tipo: 'cliente',
               updatedAt: serverTimestamp(),
               createdAt: serverTimestamp()
             }).catch(err => handleFirestoreError(err, OperationType.WRITE, `profiles/${currentUser.uid}`));
           } else {
-            // Redirección basada en rol al iniciar sesión
-            const role = await getUserRole(currentUser.uid);
-            if (role === 'soberano') setActiveView('admin');
-            else if (role === 'prestador') setActiveView('provider');
-            else setActiveView('map');
+            const data = docSnap.data();
+            if(!data.tipo) {
+                setShowRoleSelection(true);
+            } else {
+                // Redirección basada en rol al iniciar sesión
+                const role = await getUserRole(currentUser.uid);
+                if (role === 'soberano') setActiveView('admin');
+                else if (role === 'prestador') setActiveView('provider');
+                else setActiveView('map');
+            }
           }
         } catch (err) {
           handleFirestoreError(err, OperationType.GET, `profiles/${currentUser.uid}`);
@@ -201,6 +209,13 @@ export default function App() {
       {/* DashboardNavigation is now managed within views or left here for persistent access if needed */}
       <DashboardNavigation activeView={activeView} onViewChange={setActiveView} userId={user?.uid || ''} />
 
+      {showRoleSelection && (
+        <RoleSelection userId={user.uid} onRoleSelected={() => {
+            setShowRoleSelection(false);
+            window.location.reload();
+        }} />
+      )}
+
       {activeView === 'map' && user && (
         <ClientAppLayout 
           user={user}
@@ -237,24 +252,6 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {activeView === 'map' && user && (
-        <ClientAppLayout 
-          user={user}
-          state={state}
-          orbState={orbState}
-          isLiveActive={isLiveActive}
-          liveTranscript={liveTranscript}
-          handleOrbClick={handleOrbClick}
-          providers={providers.filter(p => {
-            const lat = Number(p.latitude ?? p.lat);
-            const lng = Number(p.longitude ?? p.lng);
-            return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
-          })}
-          onHire={handleHire}
-          onSelectProvider={selectProvider}
-        />
-      )}
       
       {/* Chat Window */}
       {isChatOpen && activeChatTarget && user && (

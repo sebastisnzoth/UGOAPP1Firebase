@@ -93,7 +93,7 @@ export function useLiveHugo() {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
           },
           systemInstruction: `Eres "Hugo", el Orbe inteligente y núcleo central de un Sistema Operativo de Servicios (U.GO OS).
 Tu interfaz es una esfera animada y te comunicas por voz.

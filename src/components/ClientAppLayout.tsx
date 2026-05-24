@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import QuantumMap from './QuantumMap';
 import DashboardNavigation from './DashboardNavigation';
 import HugoOrb from './HugoOrb';
+import ConfirmationDialog from './ConfirmationDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -20,40 +21,59 @@ interface ClientAppLayoutProps {
 export default function ClientAppLayout({ 
   user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, providers, onHire, onSelectProvider 
 }: ClientAppLayoutProps) {
+  const [hireConfirm, setHireConfirm] = useState(false);
+  const selectedProvider = providers.find(p => p.id === state.datos?.proveedor_seleccionado);
+
+  const initiateHire = () => {
+    setHireConfirm(true);
+  };
+
+  const confirmHire = () => {
+    if (selectedProvider) {
+      onHire(selectedProvider.id);
+      setHireConfirm(false);
+    }
+  };
+
   return (
     <div className="relative h-[100dvh] w-screen bg-black overflow-hidden">
+      <ConfirmationDialog 
+        isOpen={hireConfirm}
+        providerName={selectedProvider?.nombre || 'Provedor'}
+        cost={selectedProvider?.precio || 0}
+        onConfirm={confirmHire}
+        onCancel={() => setHireConfirm(false)}
+      />
       {/* Map Layer */}
       <div className="absolute inset-0 z-0">
         <QuantumMap 
-          center={[-34.6037, -58.3816]} // Default center
+          center={{ lat: -34.6037, lng: -58.3816 }} // Default center
           providers={providers}
           activeProviderId={state.datos?.proveedor_seleccionado}
-          onHire={onHire}
+          onHire={(name) => initiateHire()}
           onSelectProvider={onSelectProvider}
-        />
-      </div>
-
-      {/* Navigation - Right Side (Based on image) */}
-      <div className="absolute top-6 right-6 z-40">
-        <DashboardNavigation 
-          activeView={"map"} 
-          onViewChange={() => {}} 
-          userId={user?.uid || ""} 
         />
       </div>
 
       {/* Provider Card Overlay - Left Side (Based on image) */}
       <AnimatePresence>
-        {state.datos?.proveedor_seleccionado && (
+        {selectedProvider && (
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             className="absolute top-6 left-6 w-80 z-40"
           >
-            {/* Implement Provider Profile Card here based on the image description */}
             <div className="p-6 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl text-white">
-                {/* Simplified Card Content */}
+                <h2 className="text-lg font-bold">{selectedProvider.nombre}</h2>
+                <p className="text-sm text-white/60 mb-2">{selectedProvider.categoria}</p>
+                <p className="text-sm text-white/80 mb-4">{selectedProvider.bio_memoria}</p>
+                <button 
+                    onClick={initiateHire}
+                    className="w-full py-2 bg-quantum-cyan text-black font-bold rounded-xl text-sm"
+                >
+                    Contratar (R$ {selectedProvider.precio}/h)
+                </button>
             </div>
           </motion.div>
         )}

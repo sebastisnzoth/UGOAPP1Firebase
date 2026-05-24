@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "784807284164",
+    "project_id": "ugoappa1-e9522",
+    "storage_bucket": "ugoappa1-e9522.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:784807284164:android:8b59aefa05a531629be891",
+        "android_client_info": {
+          "package_name": "com.app.ugo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgMXr-WrJM4yXHlXdokyCAxoXiMTGHMuA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

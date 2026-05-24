@@ -23,7 +23,9 @@ export default function WalletView({ userId }: WalletViewProps) {
     };
     fetchData();
 
-    const unsubscribe = subscribeToTransactions(userId, setTransactions);
+    const unsubscribe = subscribeToTransactions(userId, setTransactions, (error) => {
+      console.error('Error in subscribeToTransactions:', error);
+    });
     return () => unsubscribe();
   }, [userId]);
 

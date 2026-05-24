@@ -2,53 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Regla global para administradores (Tú)
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'sebastianzoth@gmail.com';
-    }
-
-    // Helper para verificar si es el dueño
-    function isOwner(uid) {
-      return request.auth != null && request.auth.uid == uid;
-    }
-
-    match /comunicaciones/{document=**} {
-      allow read, write: if true;
-    }
-
-    match /profiles/{userId} {
-      // Cualquier usuario puede leer perfiles
-      allow read: if true;
-      // Cualquier usuario puede escribir para perfiles invitados o normales
-      allow write: if true;
-    }
-    
-    // Contratos Collection (La Bóveda)
-    match /contratos/{contractId} {
-      allow read, write: if true;
-    }
-
-    match /notifications/{docId} {
-      allow read, write: if true;
-    }
-
-    match /agendamentos/{docId} {
-      allow read, write: if true;
-    }
-
-    match /wallets/{docId} {
-      allow read, write: if true;
-    }
-
-    match /transactions/{docId} {
-      allow read, write: if true;
-    }
-
-    match /mensagens/{docId} {
-      allow read, write: if true;
-    }
-
-    match /avaliacoes/{docId} {
+    // Default Access: Allow anyone read/write for development. 
+    // In production, restrict this.
+    match /{document=**} {
       allow read, write: if true;
     }
   }

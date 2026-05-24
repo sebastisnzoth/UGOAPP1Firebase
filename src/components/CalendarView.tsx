@@ -11,7 +11,9 @@ export default function CalendarView({ userId }: CalendarViewProps) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAppointments(userId, setAppointments);
+    const unsubscribe = subscribeToAppointments(userId, setAppointments, (error) => {
+      console.error('Error in subscribeToAppointments:', error);
+    });
     return () => unsubscribe();
   }, [userId]);
 

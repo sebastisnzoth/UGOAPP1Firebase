@@ -127,7 +127,7 @@ export default function AdminPanel() {
       </div>
 
       <div className="h-96 w-full mb-8 rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl">
-        <QuantumMap center={[-34.6037, -58.3816]} providers={providers} />
+        <QuantumMap center={{ lat: -34.6037, lng: -58.3816 }} providers={providers} />
       </div>
       
       {/* Terminal Area */}
