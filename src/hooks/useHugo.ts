@@ -55,10 +55,10 @@ export function useHugo() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-  useEffect(() => {
+  const requestLocation = useCallback(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-      () => console.warn("Usando localização padrão (Florianópolis)")
+      (err) => console.error("Erro ao obter localização:", err)
     );
   }, []);
 
@@ -205,6 +205,7 @@ export function useHugo() {
     sayWelcome,
     stopTTS,
     userLocation,
+    requestLocation,
     selectProvider
   };
 }

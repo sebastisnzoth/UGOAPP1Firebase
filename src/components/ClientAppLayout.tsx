@@ -5,6 +5,7 @@ import HugoOrb from './HugoOrb';
 import ConfirmationDialog from './ConfirmationDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { MapPin } from 'lucide-react';
 
 interface ClientAppLayoutProps {
   user: any;
@@ -13,13 +14,14 @@ interface ClientAppLayoutProps {
   isLiveActive: boolean;
   liveTranscript: string | null;
   handleOrbClick: () => void;
+  onRequestLocation: () => void;
   providers: any[];
   onHire: (id: string) => void;
   onSelectProvider: (p: any) => void;
 }
 
 export default function ClientAppLayout({ 
-  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, providers, onHire, onSelectProvider 
+  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, providers, onHire, onSelectProvider 
 }: ClientAppLayoutProps) {
   const [hireConfirm, setHireConfirm] = useState(false);
   const selectedProvider = providers.find(p => p.id === state.datos?.proveedor_seleccionado);
@@ -53,6 +55,17 @@ export default function ClientAppLayout({
           onHire={(name) => initiateHire()}
           onSelectProvider={onSelectProvider}
         />
+      </div>
+
+      {/* Location Request Button */}
+      <div className="absolute top-6 right-6 z-40">
+        <button 
+          onClick={onRequestLocation}
+          className="p-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full text-white hover:bg-quantum-cyan hover:text-black transition-colors"
+          title="Solicitar ubicación real"
+        >
+          <MapPin size={20} />
+        </button>
       </div>
 
       {/* Provider Card Overlay - Left Side (Based on image) */}
