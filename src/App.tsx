@@ -38,7 +38,7 @@ export default function App() {
     setIsChatOpen(true);
   };
   
-	const { state, orbState, processMessage, analyzeMedia, sayWelcome, stopTTS, userLocation, requestLocation, selectProvider } = useHugo();
+	const { state, orbState, processMessage, analyzeMedia, sayWelcome, stopTTS, userLocation, requestLocation, isLocationLoading, selectProvider } = useHugo();
   const { isActive: isLiveActive, startLive, stopLive, transcript: liveTranscript } = useLiveHugo();
 
   // Watch for SHOW_PROVIDERS action to open drawer
@@ -225,6 +225,7 @@ export default function App() {
           liveTranscript={liveTranscript}
           handleOrbClick={handleOrbClick}
           onRequestLocation={requestLocation}
+          isLocationLoading={isLocationLoading}
           providers={providers.filter(p => {
             const lat = Number(p.latitude ?? p.lat);
             const lng = Number(p.longitude ?? p.lng);

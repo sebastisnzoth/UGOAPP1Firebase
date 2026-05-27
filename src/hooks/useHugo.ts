@@ -52,13 +52,21 @@ export function useHugo() {
   const [history, setHistory] = useState<any[]>([]);
   const [orbState, setOrbState] = useState<'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING'>('IDLE');
   const [userLocation, setUserLocation] = useState<[number, number]>([-27.5945, -48.5477]);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const requestLocation = useCallback(() => {
+    setIsLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-      (err) => console.error("Erro ao obter localização:", err)
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        setIsLocationLoading(false);
+      },
+      (err) => {
+        console.error("Erro ao obter localização:", err);
+        setIsLocationLoading(false);
+      }
     );
   }, []);
 
@@ -206,6 +214,7 @@ export function useHugo() {
     stopTTS,
     userLocation,
     requestLocation,
+    isLocationLoading,
     selectProvider
   };
 }

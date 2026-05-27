@@ -15,13 +15,14 @@ interface ClientAppLayoutProps {
   liveTranscript: string | null;
   handleOrbClick: () => void;
   onRequestLocation: () => void;
+  isLocationLoading: boolean;
   providers: any[];
   onHire: (id: string) => void;
   onSelectProvider: (p: any) => void;
 }
 
 export default function ClientAppLayout({ 
-  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, providers, onHire, onSelectProvider 
+  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, isLocationLoading, providers, onHire, onSelectProvider 
 }: ClientAppLayoutProps) {
   const [hireConfirm, setHireConfirm] = useState(false);
   const selectedProvider = providers.find(p => p.id === state.datos?.proveedor_seleccionado);
@@ -61,10 +62,14 @@ export default function ClientAppLayout({
       <div className="absolute top-6 right-6 z-40">
         <button 
           onClick={onRequestLocation}
-          className="p-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full text-white hover:bg-quantum-cyan hover:text-black transition-colors"
+          disabled={isLocationLoading}
+          className={cn(
+            "p-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full text-white transition-all",
+            isLocationLoading ? "animate-pulse border-quantum-cyan" : "hover:bg-quantum-cyan hover:text-black"
+          )}
           title="Solicitar ubicación real"
         >
-          <MapPin size={20} />
+          <MapPin size={20} className={isLocationLoading ? "animate-spin" : ""} />
         </button>
       </div>
 

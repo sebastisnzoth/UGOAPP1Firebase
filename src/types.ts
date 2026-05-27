@@ -45,13 +45,44 @@ export interface Appointment {
   service: string;
 }
 
+export type UserRole = 'cliente' | 'proveedor' | 'administrador';
+
 export interface UserProfile {
   uid: string;
   nombre: string;
+  email: string;
   foto?: string;
   bio?: string;
-  rating?: number;
-  rol: 'cliente' | 'proveedor' | 'admin';
+  role: UserRole;
+  disponible?: boolean;
+  karma: number; // Gobernación basada en reputación
+  bio_memoria?: {
+    score_total: number;
+    servicios_exitosos: number;
+    preferencias?: string[];
+  };
+}
+
+export interface HugoResponse {
+  hugo_mensaje: string;
+  accion: 'NEGOCIAR_PROVEEDOR' | 'PROPONER_CIERRE' | 'CONFIRMAR_EMERGENCIA' |
+'MEMORIA_CONSULTA' | 'REGISTRAR_NUEVO_GOOGLE' | 'RECOCAR_SUPERADMIN';
+  ui_action: 'LOGIN_SCREEN' | 'CLIENT_DASHBOARD' | 'PROVIDER_DASHBOARD' | 'ADMIN_DASHBOARD' |
+'ACTIVE_SERVICE' | 'CHECKOUT';
+  ui_data: {
+    rol_actual: UserRole | 'ninguno';
+    karma_usuario: number;
+    estado_boveda: 'ESPERANDO' | 'ASEGURADA' | 'LIBERADA_HITOS';
+    monto_acordado?: number;
+    mapa_seguimiento: {
+      activo: boolean;
+      eta_llegada: string | null;
+    };
+  };
+  datos_sistema?: {
+    servicio_solicitado: string | null;
+    fecha_hora_solicitada: string | null;
+  };
 }
 
 export interface Wallet {

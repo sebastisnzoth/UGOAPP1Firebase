@@ -6,8 +6,12 @@ import firebaseConfig from '@/firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId === '(default)' ? undefined : firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.send');
+googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
 
 // Enable offline persistence
 enableIndexedDbPersistence(db).catch((err) => {
