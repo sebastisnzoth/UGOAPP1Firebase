@@ -1,31 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 1. Identifica al administrador maestro
-    function esSoberano(request) {
-      return request.auth != null && request.auth.token.email == 'sebastianzoth@gmail.com';
-    }
-
-    // 2. Acceso a Perfiles
-    match /profiles/{userId} {
-      // Permitimos lectura si el usuario es el dueño o el admin
-      allow read: if request.auth != null && (request.auth.uid == userId || esSoberano(request));
-      
-      // Permitimos escritura a usuarios logueados O si el ID es 'guest_user'
-      allow write: if (request.auth != null && request.auth.uid == userId) || userId == 'guest_user' || esSoberano(request);
-    }
-
-    // 3. Acceso a Comunicaciones (El log de Hugo)
-    match /comunicaciones/{document=**} {
-      // Permitimos lectura/escritura a cualquier usuario autenticado
-      allow read, write: if request.auth != null || esSoberano(request);
-    }
-
-    // 4. Acceso a Proveedores
-    match /profiles_providers/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if esSoberano(request);
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

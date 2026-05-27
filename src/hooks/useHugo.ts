@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { hugoService, HugoResponse } from '../services/hugoService';
+import { db, auth } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface Provider {
   id: string;
@@ -165,6 +167,23 @@ export function useHugo() {
       }
 
       setState(result as HugoState);
+      
+      if (result.accion === 'CONFIRMAR_EMERGENCIA') {
+        try {
+          await addDoc(collection(db, 'bookings'), {
+            userId: auth.currentUser?.uid,
+            location: {
+              latitude: userLocation[0],
+              longitude: userLocation[1]
+            },
+            ...result.datos,
+            createdAt: serverTimestamp()
+          });
+        } catch (error) {
+          console.error("Erro ao salvar emergência na coleção bookings:", error);
+        }
+      }
+
       await playTTS(result.hugo_mensaje);
 
     } catch (error) {
