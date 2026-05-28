@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import QuantumMap from './QuantumMap';
 import DashboardNavigation from './DashboardNavigation';
 import HugoOrb from './HugoOrb';
@@ -6,6 +6,7 @@ import ConfirmationDialog from './ConfirmationDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { MapPin } from 'lucide-react';
+import { useProviders } from '../contexts/ProvidersContext';
 
 interface ClientAppLayoutProps {
   user: any;
@@ -16,16 +17,25 @@ interface ClientAppLayoutProps {
   handleOrbClick: () => void;
   onRequestLocation: () => void;
   isLocationLoading: boolean;
-  providers: any[];
   onHire: (id: string) => void;
   onSelectProvider: (p: any) => void;
 }
 
 export default function ClientAppLayout({ 
-  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, isLocationLoading, providers, onHire, onSelectProvider 
+  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, isLocationLoading, onHire, onSelectProvider 
 }: ClientAppLayoutProps) {
+  const { providers } = useProviders();
   const [hireConfirm, setHireConfirm] = useState(false);
-  const selectedProvider = providers.find(p => p.id === state.datos?.proveedor_seleccionado);
+  
+  const filteredProviders = useMemo(() => {
+    return providers.filter(p => {
+      const lat = Number(p.latitude ?? p.lat);
+      const lng = Number(p.longitude ?? p.lng);
+      return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
+    });
+  }, [providers]);
+
+  const selectedProvider = filteredProviders.find(p => p.id === state.datos?.proveedor_seleccionado);
 
   const initiateHire = () => {
     setHireConfirm(true);
@@ -60,7 +70,7 @@ export default function ClientAppLayout({
       <div className="absolute inset-0 z-0">
         <QuantumMap 
           center={mapCenter}
-          providers={providers}
+          providers={filteredProviders}
           activeProviderId={state.datos?.proveedor_seleccionado}
           onHire={(name) => initiateHire()}
           onSelectProvider={onSelectProvider}
