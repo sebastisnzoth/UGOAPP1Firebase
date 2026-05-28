@@ -37,9 +37,9 @@ export default function AdminPanel() {
       setMetrics(prev => ({ ...prev, serviciosActivos: snap.size }));
     });
 
-    // 3. Escuchar Prestadores Online y datos para el mapa
+    // 3. Escuchar Proveedores Online y datos para el mapa
     const profilesRef = collection(db, 'profiles');
-    const q = query(profilesRef, where('tipo', '==', 'prestador'));
+    const q = query(profilesRef, where('role', '==', 'proveedor'));
     const unsubProfiles = onSnapshot(q, (snap) => {
       const providersList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       setProviders(providersList);

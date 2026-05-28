@@ -1,7 +1,7 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
-export type UserRole = 'cliente' | 'prestador' | 'soberano';
+export type UserRole = 'cliente' | 'proveedor' | 'administrador';
 
 export async function getUserRole(uid: string): Promise<UserRole | null> {
   try {
@@ -9,7 +9,7 @@ export async function getUserRole(uid: string): Promise<UserRole | null> {
     const profileSnap = await getDoc(profileRef);
     
     if (profileSnap.exists()) {
-      return profileSnap.data().tipo as UserRole;
+      return profileSnap.data().role as UserRole;
     }
   } catch (error) {
     console.error("Error obteniendo rol del usuario:", error);
@@ -29,17 +29,17 @@ export function checkAdminAccess(userEmail: string | null | undefined): boolean 
 
 export function routeUser(role: UserRole) {
   switch (role) {
-    case 'soberano':
-      window.location.href = '/admin-touchboard';
+    case 'administrador':
+      window.location.href = '#/admin-touchboard';
       break;
-    case 'prestador':
-      window.location.href = '/prestador-dashboard';
+    case 'proveedor':
+      window.location.href = '#/prestador-dashboard';
       break;
     case 'cliente':
-      window.location.href = '/cliente-app';
+      window.location.href = '#/';
       break;
     default:
       console.warn("Rol no reconocido, redirigiendo a home");
-      window.location.href = '/';
+      window.location.href = '#/';
   }
 }

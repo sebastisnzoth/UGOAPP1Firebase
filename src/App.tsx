@@ -74,14 +74,14 @@ export default function App() {
             }).catch(err => handleFirestoreError(err, OperationType.WRITE, `profiles/${currentUser.uid}`));
           } else {
             const data = docSnap.data();
-            if(!data.tipo) {
+            if(!data.role) {
                 setShowRoleSelection(true);
             } else {
                 // Redirección basada en rol al iniciar sesión
                 const role = await getUserRole(currentUser.uid);
                 setUserRole(role);
-                if (role === 'soberano') setActiveView('admin');
-                else if (role === 'prestador') setActiveView('provider');
+                if (role === 'administrador') setActiveView('admin');
+                else if (role === 'proveedor') setActiveView('provider');
                 else setActiveView('map');
             }
           }
@@ -122,13 +122,13 @@ export default function App() {
                 await setDoc(userRef, {
                   uid: 'guest_user',
                   nombre: 'Invitado Quantum',
-                  tipo: 'cliente',
+                  role: 'cliente',
                   updatedAt: serverTimestamp(),
                   createdAt: serverTimestamp()
                 });
               }
             } catch (err) {
-              handleFirestoreError(err, OperationType.WRITE, 'profiles/guest_user');
+              handleFirestoreError(err, OperationType.GET, 'profiles/guest_user');
             }
           }
         }

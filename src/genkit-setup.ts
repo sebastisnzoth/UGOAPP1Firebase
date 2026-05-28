@@ -4,7 +4,7 @@ import { genkit } from 'genkit';
 
 // configure a Genkit instance
 const ai = genkit({
-  plugins: [googleAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })],
+  plugins: [googleAI({ apiKey: process.env.GEMINI_API_KEY })],
   model: gemini15Flash, // set default model
 });
 

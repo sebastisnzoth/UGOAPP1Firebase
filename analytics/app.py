@@ -16,7 +16,19 @@ def get_db():
         # En Streamlit Cloud, las credenciales se cargan desde st.secrets
         # El secreto "firebase" debe contener el JSON del Service Account
         if "firebase" in st.secrets:
-            key_dict = json.loads(st.secrets["firebase"])
+            secret_val = st.secrets["firebase"]
+            
+            # Soporta tanto String JSON como Diccionario TOML
+            if isinstance(secret_val, str):
+                key_dict = json.loads(secret_val)
+            else:
+                # Convertir AttrDict de Streamlit a dict normal
+                key_dict = dict(secret_val)
+                
+            # Corregir los saltos de línea escapados en la clave privada
+            if "private_key" in key_dict:
+                key_dict["private_key"] = key_dict["private_key"].replace('\\n', '\n')
+
             db = firestore.Client.from_service_account_info(key_dict)
             return db
         else:

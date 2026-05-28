@@ -21,7 +21,7 @@ export function ProvidersProvider({ children, isAuthReady, user }: { children: R
     }
     
     const providersRef = collection(db, 'profiles');
-    const q = query(providersRef, where('tipo', '==', 'prestador'));
+    const q = query(providersRef, where('role', '==', 'proveedor'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const providersList = snapshot.docs.map(doc => ({

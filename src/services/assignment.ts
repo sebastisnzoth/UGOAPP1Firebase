@@ -8,13 +8,13 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 export async function assignTaskToBestProvider(contractId: string, location: { lat: number, lng: number }) {
   console.log(`> Hugo: Buscando prestador óptimo para el contrato ${contractId}...`);
 
-  // 1. Buscar prestadores disponibles (simplificado para MVP)
+  // 1. Buscar proveedores disponibles (simplificado para MVP)
   const profilesRef = collection(db, 'profiles');
-  const q = query(profilesRef, where('tipo', '==', 'prestador'), where('disponible', '==', true));
+  const q = query(profilesRef, where('role', '==', 'proveedor'), where('disponible', '==', true));
   const snapshot = await getDocs(q);
 
   if (snapshot.empty) {
-    console.error('> Hugo: No hay prestadores disponibles en este momento.');
+    console.error('> Hugo: No hay proveedores disponibles en este momento.');
     return;
   }
 
