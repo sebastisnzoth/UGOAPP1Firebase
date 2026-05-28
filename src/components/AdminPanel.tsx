@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Users, Lock, Radio, Activity, MapPin, Mic, MicOff } from 'lucide-react';
+import { Users, Lock, Radio, Activity, MapPin, Mic, MicOff, ExternalLink, BarChart3 } from 'lucide-react';
 import QuantumMap from './QuantumMap';
 
 export default function AdminPanel() {
@@ -94,6 +94,16 @@ export default function AdminPanel() {
           CENTRO DE COMANDO
         </h2>
         <div className="flex items-center gap-4">
+          <a
+            href="https://share.streamlit.io/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 px-3 py-1 bg-cyan-950/30 border border-cyan-500/30 rounded-full hover:bg-cyan-900/50 transition-colors"
+          >
+            <BarChart3 size={14} className="text-cyan-400" />
+            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">Analytics</span>
+            <ExternalLink size={12} className="text-cyan-400/70" />
+          </a>
           <button 
             onClick={toggleListening}
             className={`p-2 rounded-full border ${isListening ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-cyan-950/30 border-cyan-500/30 text-cyan-400'}`}
