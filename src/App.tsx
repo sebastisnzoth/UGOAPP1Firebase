@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useHugo } from './hooks/useHugo';
 import { useLiveHugo } from './hooks/useLiveHugo';
 import HugoOrb from './components/HugoOrb';
@@ -26,6 +27,7 @@ import { getUserRole } from './lib/auth';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [providers, setProviders] = useState<any[]>([]);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
@@ -77,6 +79,7 @@ export default function App() {
             } else {
                 // Redirección basada en rol al iniciar sesión
                 const role = await getUserRole(currentUser.uid);
+                setUserRole(role);
                 if (role === 'soberano') setActiveView('admin');
                 else if (role === 'prestador') setActiveView('provider');
                 else setActiveView('map');
@@ -205,65 +208,67 @@ export default function App() {
   );
 
   return (
-    <div className="relative h-[100dvh] w-screen bg-quantum-dark overflow-hidden quantum-grid">
-      {/* DashboardNavigation is now managed within views or left here for persistent access if needed */}
-      <DashboardNavigation activeView={activeView} onViewChange={setActiveView} userId={user?.uid || ''} />
+    <HashRouter>
+      <div className="relative h-[100dvh] w-screen bg-quantum-dark overflow-hidden quantum-grid">
+        {/* DashboardNavigation is now managed within views or left here for persistent access if needed */}
+        <DashboardNavigation activeView={activeView} userId={user?.uid || ''} />
 
-      {showRoleSelection && (
-        <RoleSelection userId={user.uid} onRoleSelected={() => {
-            setShowRoleSelection(false);
-            window.location.reload();
-        }} />
-      )}
-
-      {activeView === 'map' && user && (
-        <ClientAppLayout 
-          user={user}
-          state={state}
-          orbState={orbState}
-          isLiveActive={isLiveActive}
-          liveTranscript={liveTranscript}
-          handleOrbClick={handleOrbClick}
-          onRequestLocation={requestLocation}
-          isLocationLoading={isLocationLoading}
-          providers={providers.filter(p => {
-            const lat = Number(p.latitude ?? p.lat);
-            const lng = Number(p.longitude ?? p.lng);
-            return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
-          })}
-          onHire={handleHire}
-          onSelectProvider={selectProvider}
-        />
-      )}
-
-      {/* Dynamic Content Overlay (replaced Drawers/Modals) */}
-      <AnimatePresence>
-        {activeView !== 'map' && user && (
-          <motion.div 
-            initial={{ opacity: 0, x: -100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -100 }}
-            className="absolute top-6 left-24 bottom-6 w-96 z-40"
-          >
-            {activeView === 'wallet' && <WalletView userId={user.uid} />}
-            {activeView === 'calendar' && <CalendarView userId={user.uid} />}
-            {activeView === 'history' && <ServiceHistory isOpen={true} userId={user.uid} onClose={() => setActiveView('map')} />}
-            {activeView === 'profile' && <UserProfile isOpen={true} userId={user.uid} onClose={() => setActiveView('map')} />}
-            {activeView === 'provider' && <ProviderDashboard providerId={user.uid} />}
-            {activeView === 'admin' && <AdminPanel />}
-          </motion.div>
+        {showRoleSelection && (
+          <RoleSelection userId={user.uid} onRoleSelected={() => {
+              setShowRoleSelection(false);
+              window.location.reload();
+          }} />
         )}
-      </AnimatePresence>
-      
-      {/* Chat Window */}
-      {isChatOpen && activeChatTarget && user && (
-        <ChatWindow
-          currentUserId={user.uid}
-          targetUserId={activeChatTarget}
-          onClose={() => setIsChatOpen(false)}
-        />
-      )}
-    </div>
+
+        {activeView === 'map' && user && (
+          <ClientAppLayout 
+            user={user}
+            state={state}
+            orbState={orbState}
+            isLiveActive={isLiveActive}
+            liveTranscript={liveTranscript}
+            handleOrbClick={handleOrbClick}
+            onRequestLocation={requestLocation}
+            isLocationLoading={isLocationLoading}
+            providers={providers.filter(p => {
+              const lat = Number(p.latitude ?? p.lat);
+              const lng = Number(p.longitude ?? p.lng);
+              return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
+            })}
+            onHire={handleHire}
+            onSelectProvider={selectProvider}
+          />
+        )}
+
+        {/* Dynamic Content Overlay (replaced Drawers/Modals) */}
+        <AnimatePresence>
+          {activeView !== 'map' && user && (
+            <motion.div 
+              initial={{ opacity: 0, x: -100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              className="absolute top-6 left-24 bottom-6 w-96 z-40"
+            >
+              {activeView === 'wallet' && <WalletView userId={user.uid} />}
+              {activeView === 'calendar' && <CalendarView userId={user.uid} />}
+              {activeView === 'history' && <ServiceHistory isOpen={true} userId={user.uid} onClose={() => setActiveView('map')} />}
+              {activeView === 'profile' && <UserProfile isOpen={true} userId={user.uid} onClose={() => setActiveView('map')} />}
+              {activeView === 'provider' && <ProviderDashboard providerId={user.uid} />}
+              {activeView === 'admin' && <AdminPanel />}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Chat Window */}
+        {isChatOpen && activeChatTarget && user && (
+          <ChatWindow
+            currentUserId={user.uid}
+            targetUserId={activeChatTarget}
+            onClose={() => setIsChatOpen(false)}
+          />
+        )}
+      </div>
+    </HashRouter>
   );
 }
 

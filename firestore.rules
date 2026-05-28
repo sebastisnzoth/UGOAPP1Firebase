@@ -1,36 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Funciones de validación
     function esSoberano() {
       return request.auth != null && request.auth.token.email == 'sebastianzoth@gmail.com';
     }
-
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Perfiles de Usuarios (Clientes y Proveedores)
     match /profiles/{userId} {
-      allow read, write: if esSoberano() || (isSignedIn() && request.auth.uid == userId) || userId == 'guest_user';
+      allow read, write: if true;
     }
 
-    // Colección de Logs de Auditoría y Conversaciones en vivo con Hugo
-    match /comunicaciones/{documentId} {
-      allow read, update, delete: if esSoberano() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn();
+    // Comms y Proveedores
+    match /comunicaciones/{document=**} {
+      allow read, write: if true;
     }
-
-    // Directorio de Ubicación en Tiempo Real (Modo Uber)
-    match /profiles_providers/{providerId} {
-      allow read: if isSignedIn();
-      allow write: if esSoberano() || (isSignedIn() && request.auth.uid == providerId);
-    }
-    
-    // Reservas de Servicios y Bóveda Escrow
-    match /bookings/{bookingId} {
-      allow read, update, delete: if esSoberano() || (isSignedIn() && 
-        (resource.data.clientId == request.auth.uid || resource.data.providerId == request.auth.uid));
-      allow create: if isSignedIn();
+    match /profiles_providers/{document=**} {
+      allow read, write: if true;
     }
   }
 }

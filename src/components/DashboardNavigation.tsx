@@ -1,14 +1,15 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 import { Map, Wallet, Calendar, History, User, Briefcase, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardNavigationProps {
   activeView: string;
-  onViewChange: (view: string) => void;
   userId: string;
 }
 
-export default function DashboardNavigation({ activeView, onViewChange, userId }: DashboardNavigationProps) {
+export default function DashboardNavigation({ activeView, userId }: DashboardNavigationProps) {
+  const navigate = useNavigate();
   const navItems = [
     { id: 'map', icon: Map, label: 'Radar' },
     { id: 'wallet', icon: Wallet, label: 'Bóveda' },
@@ -28,7 +29,7 @@ export default function DashboardNavigation({ activeView, onViewChange, userId }
         return (
           <button
             key={item.id}
-            onClick={() => onViewChange(item.id)}
+            onClick={() => navigate(`/${item.id}`)}
             className={cn(
               "p-2 rounded-full transition-all duration-300",
               isActive 

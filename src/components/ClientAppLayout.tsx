@@ -38,6 +38,15 @@ export default function ClientAppLayout({
     }
   };
 
+  let mapCenter = { lat: -34.6037, lng: -58.3816 };
+  if (selectedProvider) {
+    const pLat = Number(selectedProvider.latitude ?? selectedProvider.lat);
+    const pLng = Number(selectedProvider.longitude ?? selectedProvider.lng);
+    if (!isNaN(pLat) && !isNaN(pLng) && pLat !== 0 && pLng !== 0) {
+      mapCenter = { lat: pLat, lng: pLng };
+    }
+  }
+
   return (
     <div className="relative h-[100dvh] w-screen bg-black overflow-hidden">
       <ConfirmationDialog 
@@ -50,7 +59,7 @@ export default function ClientAppLayout({
       {/* Map Layer */}
       <div className="absolute inset-0 z-0">
         <QuantumMap 
-          center={{ lat: -34.6037, lng: -58.3816 }} // Default center
+          center={mapCenter}
           providers={providers}
           activeProviderId={state.datos?.proveedor_seleccionado}
           onHire={(name) => initiateHire()}

@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
+import { helloFlow } from "./src/genkit-setup";
 
 // Initialize Firebase Admin SDK lazily
 let adminApp: admin.app.App | null = null;
@@ -25,6 +26,19 @@ async function startServer() {
   const PORT = 3000;
 
   // API routes
+  app.use(express.json());
+  
+  app.post("/api/hugo", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      const response = await helloFlow(prompt || "Hola");
+      res.json({ text: response });
+    } catch (error) {
+      console.error("Genkit error:", error);
+      res.status(500).json({ error: "Error interno en Hugo" });
+    }
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });

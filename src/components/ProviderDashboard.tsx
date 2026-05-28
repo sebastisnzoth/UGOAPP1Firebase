@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { UserProfile } from '../types';
@@ -6,9 +6,9 @@ import { UserProfile } from '../types';
 export default function ProviderDashboard({ providerId }: { providerId: string }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
+  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Fetch profile using providerId prop instead of auth.currentUser directly
     const profileRef = doc(db, 'profiles', providerId);
     const unsubProfile = onSnapshot(profileRef, (doc) => {
       if (doc.exists()) {
@@ -16,7 +16,6 @@ export default function ProviderDashboard({ providerId }: { providerId: string }
       }
     });
 
-    // Fetch bookings using providerId prop
     const bookingsQuery = query(
       collection(db, 'bookings'), 
       where('proveedorId', '==', providerId), 
@@ -32,6 +31,41 @@ export default function ProviderDashboard({ providerId }: { providerId: string }
       unsubBookings();
     };
   }, [providerId]);
+
+  // Real-time location tracking
+  useEffect(() => {
+    if (profile?.disponible || bookings.length > 0) {
+      if (!watchIdRef.current && navigator.geolocation) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            const profileRef = doc(db, 'profiles', providerId);
+            const providerRef = doc(db, 'profiles_providers', providerId);
+            try {
+              await updateDoc(profileRef, { lat: latitude, lng: longitude, latitude, longitude });
+              await updateDoc(providerRef, { lat: latitude, lng: longitude, latitude, longitude });
+            } catch (err) {
+              console.error("Failed to update location", err);
+            }
+          },
+          (err) => console.error(err),
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        );
+      }
+    } else {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    }
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [profile?.disponible, bookings.length, providerId]);
 
   const toggleAvailability = async () => {
     if (!profile) return;

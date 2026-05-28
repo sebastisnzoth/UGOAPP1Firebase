@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import React, { useState, useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Zap, Wrench, Briefcase, UserCircle, Filter, MapPin } from 'lucide-react';
@@ -10,6 +10,16 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+function MapUpdater({ center }: { center: { lat: number; lng: number } }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!isNaN(center.lat) && !isNaN(center.lng)) {
+      map.flyTo([center.lat, center.lng], map.getZoom(), { animate: true, duration: 1.5 });
+    }
+  }, [center.lat, center.lng, map]);
+  return null;
+}
 
 interface Provider {
   id: string;
@@ -80,6 +90,7 @@ export default function QuantumMap({ center, providers, activeProviderId, onHire
           </div>
         </div>
         <MapContainer center={[center.lat, center.lng]} zoom={14} style={{ width: '100%', height: '100%' }}>
+          <MapUpdater center={center} />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
           {filteredProviders.map(p => {
              const lat = Number(p.latitude ?? p.lat);
