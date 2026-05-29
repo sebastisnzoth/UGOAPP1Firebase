@@ -25,17 +25,29 @@ def get_db():
                 # Convertir AttrDict de Streamlit a dict normal
                 key_dict = dict(secret_val)
                 
-            # Corregir los saltos de línea escapados en la clave privada
+            # Corregir los saltos de línea y otros caracteres en la clave privada
             if "private_key" in key_dict:
-                key_dict["private_key"] = key_dict["private_key"].replace('\\n', '\n')
+                pk = key_dict["private_key"]
+                pk = pk.strip()
+                # Si de casualidad se pegó con comillas envolventes
+                if pk.startswith('"') and pk.endswith('"'):
+                    pk = pk[1:-1]
+                # Reemplazar doble escapado por real newline
+                pk = pk.replace('\\n', '\n')
+                # Eliminar retornos de carro 
+                pk = pk.replace('\r', '')
+                key_dict["private_key"] = pk
 
             db = firestore.Client.from_service_account_info(key_dict)
             return db
         else:
-            st.warning("No se encontraron secretos de Firebase en la configuración.")
+            st.warning("No se encontraron secretos de 'firebase' en la configuración.")
             return None
     except Exception as e:
-        st.error(f"Error de conexión: {e}")
+        error_msg = str(e)
+        st.error(f"Error de conexión a Firestore: {error_msg}")
+        if "Unable to load PEM file" in error_msg:
+            st.error("💡 Atención: La clave privada (`private_key`) en tus secretos de Streamlit (st.secrets) es inválida. Asegúrate de haber copiado el texto excato tal como sale en el JSON (incluyendo todos los `\\n`). No debes incluir puntos suspensivos (`...`) y el texto debe estar en base64 válido entre "-----BEGIN PRIVATE KEY-----" y "-----END PRIVATE KEY-----".")
         return None
 
 db = get_db()
