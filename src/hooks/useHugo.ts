@@ -72,6 +72,10 @@ export function useHugo() {
     );
   }, []);
 
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
+
   const stopTTS = () => {
     if (currentSourceRef.current) {
       currentSourceRef.current.stop();

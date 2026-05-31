@@ -5,7 +5,7 @@ import HugoOrb from './HugoOrb';
 import ConfirmationDialog from './ConfirmationDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { MapPin } from 'lucide-react';
+import { MapPin, Map, Layers } from 'lucide-react';
 import { useProviders } from '../contexts/ProvidersContext';
 
 interface ClientAppLayoutProps {
@@ -17,15 +17,17 @@ interface ClientAppLayoutProps {
   handleOrbClick: () => void;
   onRequestLocation: () => void;
   isLocationLoading: boolean;
+  userLocation?: [number, number];
   onHire: (id: string) => void;
   onSelectProvider: (p: any) => void;
 }
 
 export default function ClientAppLayout({ 
-  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, isLocationLoading, onHire, onSelectProvider 
+  user, state, orbState, isLiveActive, liveTranscript, handleOrbClick, onRequestLocation, isLocationLoading, userLocation, onHire, onSelectProvider 
 }: ClientAppLayoutProps) {
   const { providers } = useProviders();
   const [hireConfirm, setHireConfirm] = useState(false);
+  const [mapTheme, setMapTheme] = useState<'dark' | 'satellite'>('dark');
   
   const filteredProviders = useMemo(() => {
     return providers.filter(p => {
@@ -49,6 +51,10 @@ export default function ClientAppLayout({
   };
 
   let mapCenter = { lat: -34.6037, lng: -58.3816 };
+  if (userLocation) {
+    mapCenter = { lat: userLocation[0], lng: userLocation[1] };
+  }
+  
   if (selectedProvider) {
     const pLat = Number(selectedProvider.latitude ?? selectedProvider.lat);
     const pLng = Number(selectedProvider.longitude ?? selectedProvider.lng);
@@ -72,13 +78,24 @@ export default function ClientAppLayout({
           center={mapCenter}
           providers={filteredProviders}
           activeProviderId={state.datos?.proveedor_seleccionado}
+          mapTheme={mapTheme}
           onHire={(name) => initiateHire()}
           onSelectProvider={onSelectProvider}
         />
       </div>
 
-      {/* Location Request Button */}
-      <div className="absolute top-6 right-6 z-40">
+      {/* Map Actions */}
+      <div className="absolute top-6 right-6 z-40 flex flex-col gap-2">
+        <button 
+          onClick={() => setMapTheme(mapTheme === 'dark' ? 'satellite' : 'dark')}
+          className={cn(
+            "p-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full text-white transition-all hover:bg-quantum-cyan hover:text-black",
+            mapTheme === 'satellite' ? "bg-quantum-cyan/20 border-quantum-cyan" : ""
+          )}
+          title="Cambiar vista de mapa"
+        >
+          <Layers size={20} />
+        </button>
         <button 
           onClick={onRequestLocation}
           disabled={isLocationLoading}

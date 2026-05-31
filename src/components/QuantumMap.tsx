@@ -46,11 +46,12 @@ interface QuantumMapProps {
   center: { lat: number; lng: number };
   providers: Provider[];
   activeProviderId?: string;
+  mapTheme?: 'dark' | 'satellite';
   onHire?: (providerName: string) => void;
   onSelectProvider?: (providerId: string) => void;
 }
 
-export default function QuantumMap({ center, providers, activeProviderId, onHire, onSelectProvider }: QuantumMapProps) {
+export default function QuantumMap({ center, providers, activeProviderId, mapTheme = 'dark', onHire, onSelectProvider }: QuantumMapProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | 'Todos'>('Todos');
   const [minRating, setMinRating] = useState(0);
   const [maxDistance, setMaxDistance] = useState(50); // KM
@@ -79,9 +80,17 @@ export default function QuantumMap({ center, providers, activeProviderId, onHire
     });
   }, [providers, selectedCategory, minRating, maxDistance, center]);
 
+  const tileUrl = mapTheme === 'satellite' 
+    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' 
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    
+  const attribution = mapTheme === 'satellite'
+    ? '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
   return (
-      <div className="relative w-full h-full">
-        <div className="absolute top-4 left-4 z-50 flex flex-col gap-2">
+      <div className="relative w-full h-full bg-quantum-dark">
+        <div className="absolute top-4 left-4 z-[400] flex flex-col gap-2">
           <div className="bg-quantum-dark/80 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl w-60">
              <div className="text-xs text-white mb-1">Rating Mínimo: {minRating}</div>
              <input type="range" min="0" max="5" step="0.5" value={minRating} onChange={(e) => setMinRating(Number(e.target.value))} className="w-full mb-3" />
@@ -91,7 +100,7 @@ export default function QuantumMap({ center, providers, activeProviderId, onHire
         </div>
         <MapContainer center={[center.lat, center.lng]} zoom={14} style={{ width: '100%', height: '100%' }}>
           <MapUpdater center={center} />
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' />
+          <TileLayer url={tileUrl} attribution={attribution} />
           {filteredProviders.map(p => {
              const lat = Number(p.latitude ?? p.lat);
              const lng = Number(p.longitude ?? p.lng);

@@ -214,6 +214,7 @@ export default function App() {
                 handleOrbClick={handleOrbClick}
                 onRequestLocation={requestLocation}
                 isLocationLoading={isLocationLoading}
+                userLocation={userLocation}
                 onHire={handleHire}
                 onSelectProvider={selectProvider}
               />
