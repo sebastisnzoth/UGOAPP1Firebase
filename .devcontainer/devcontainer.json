@@ -1,0 +1,30 @@
+{
+  "name": "U.G.O. QUANTUM OS Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "tailwindCSS.experimental.classRegex": [
+          ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*)[\"'`]"]
+        ]
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "dsznajder.es7-react-js-snippets"
+      ]
+    }
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "U.G.O. QUANTUM OS App Server",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "npm install && (test -f .env || cp .env.example .env || true)",
+  "remoteUser": "node"
+}

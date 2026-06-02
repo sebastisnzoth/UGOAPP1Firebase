@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Zap, Wrench, Briefcase, UserCircle, Filter, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Fix leaflet marker icon
 L.Icon.Default.mergeOptions({
@@ -20,7 +21,22 @@ function MapUpdater({ center }: { center: { lat: number; lng: number } }) {
       try {
         const zoom = map.getZoom();
         const safeZoom = (typeof zoom === 'number' && !isNaN(zoom)) ? zoom : 14;
-        map.flyTo([lat, lng], safeZoom, { animate: true, duration: 1.5 });
+        
+        // Calculate coordinate angular distance to adjust duration and deceleration curves
+        const currentCenter = map.getCenter();
+        const dLat = Math.abs(currentCenter.lat - lat);
+        const dLng = Math.abs(currentCenter.lng - lng);
+        const dist = Math.sqrt(dLat * dLat + dLng * dLng); // distance in degrees
+        
+        // Premium dynamic transition duration:
+        // Short hops: ~1.2s. Massive pans: capped smoothly at 2.4s.
+        const computedDuration = Math.min(2.4, Math.max(1.2, 1.2 + dist * 55));
+        
+        map.flyTo([lat, lng], safeZoom, {
+          animate: true,
+          duration: computedDuration,
+          easeLinearity: 0.15 // Smaller linearity value means faster start and much wider/smoother deceleration landing (higher easing-out)
+        });
       } catch (err) {
         console.warn("Map flyTo failed softly:", err);
       }
@@ -105,6 +121,52 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
   const [minRating, setMinRating] = useState(0);
   const [maxDistance, setMaxDistance] = useState(50); // KM
 
+  const [lastCenter, setLastCenter] = useState(center);
+  const [focusPulse, setFocusPulse] = useState(false);
+  const [focusedProvider, setFocusedProvider] = useState<Provider | null>(null);
+
+  // Monitor center coordinate updates to trigger lock-on radar
+  useEffect(() => {
+    const lat = Number(center?.lat);
+    const lng = Number(center?.lng);
+    const lastLat = Number(lastCenter?.lat);
+    const lastLng = Number(lastCenter?.lng);
+    
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 && (lat !== lastLat || lng !== lastLng)) {
+      setLastCenter(center);
+      setFocusPulse(true);
+      
+      const matchingProv = providers.find(p => {
+        const plat = Number(p.latitude ?? p.lat);
+        const plng = Number(p.longitude ?? p.lng);
+        return Math.abs(plat - lat) < 0.0001 && Math.abs(plng - lng) < 0.0001;
+      });
+      if (matchingProv) {
+        setFocusedProvider(matchingProv);
+      }
+      
+      const timer = setTimeout(() => {
+        setFocusPulse(false);
+      }, 2200);
+      return () => clearTimeout(timer);
+    }
+  }, [center, lastCenter, providers]);
+
+  // Monitor explicitly activated provider IDs for focus sweeps
+  useEffect(() => {
+    if (activeProviderId) {
+      const activeP = providers.find(p => p.id === activeProviderId);
+      if (activeP) {
+        setFocusedProvider(activeP);
+        setFocusPulse(true);
+        const timer = setTimeout(() => {
+          setFocusPulse(false);
+        }, 2200);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeProviderId, providers]);
+
   const safeCenter = useMemo(() => {
     const lat = Number(center?.lat);
     const lng = Number(center?.lng);
@@ -149,6 +211,74 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
 
   return (
       <div className="relative w-full h-full bg-quantum-dark">
+        {/* Cyberpunk Easing Sweep HUD & Targeting Reticle Overlay */}
+        <AnimatePresence>
+          {focusPulse && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 z-[399] pointer-events-none overflow-hidden flex items-center justify-center bg-transparent"
+            >
+              {/* Glowing vertical swipe scanner bars */}
+              <motion.div 
+                initial={{ y: '-100%' }}
+                animate={{ y: '200%' }}
+                transition={{ duration: 2.2, ease: 'easeInOut' }}
+                className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-quantum-cyan/80 to-transparent shadow-[0_0_15px_#00f2ff,0_0_30px_#00f2ff]"
+              />
+
+              {/* Central Lock-on HUD Frame */}
+              <div className="relative w-48 h-48 flex items-center justify-center">
+                {/* Cybernetic brackets */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-quantum-cyan shadow-[-2px_-2px_8px_rgba(0,242,255,0.5)]" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-quantum-cyan shadow-[2px_-2px_8px_rgba(0,242,255,0.5)]" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-quantum-cyan shadow-[-2px_2px_8px_rgba(0,242,255,0.5)]" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-quantum-cyan shadow-[2px_2px_8px_rgba(0,242,255,0.5)]" />
+
+                {/* Innermost pulsing targeting crosshair */}
+                <motion.div 
+                  animate={{ scale: [0.93, 1.07, 0.93], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                  className="w-16 h-16 rounded-full border border-quantum-cyan/30 flex items-center justify-center relative bg-quantum-dark/30 backdrop-blur-[2px]"
+                >
+                  <div className="w-2 h-2 bg-quantum-cyan rounded-full animate-pingAbsolute" style={{ animation: 'ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                  <div className="w-1.5 h-1.5 bg-quantum-cyan rounded-full" />
+                </motion.div>
+
+                {/* Human lock status text */}
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="absolute -top-10 text-center flex flex-col items-center justify-center"
+                >
+                  <span className="text-[10px] font-mono text-quantum-cyan font-bold uppercase tracking-[0.25em] drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]">Enfocando...</span>
+                </motion.div>
+
+                {/* Focused provider card snippet */}
+                {focusedProvider && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="absolute -bottom-14 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-3 shadow-2xl w-max border-b-quantum-cyan/50"
+                  >
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-quantum-cyan opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-quantum-cyan"></span>
+                    </span>
+                    <div className="flex flex-col text-left">
+                      <span className="text-[9px] font-mono text-quantum-cyan/85 uppercase tracking-wider font-bold">Ubicación Sincronizada</span>
+                      <span className="text-xs text-white/95 font-semibold leading-tight">{focusedProvider.nombre || (focusedProvider.primeiro_nome ? `${focusedProvider.primeiro_nome} ${focusedProvider.sobrenome || ''}` : 'Proveedor')}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className={`absolute left-1/2 -translate-x-1/2 z-[400] flex gap-4 pointer-events-none transition-all duration-500 ${activeProviderId ? 'top-64 md:top-6' : 'top-6'}`}>
           <div className="bg-black/60 backdrop-blur-3xl p-4 rounded-3xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] w-72 pointer-events-auto flex flex-col gap-4">
              <div>

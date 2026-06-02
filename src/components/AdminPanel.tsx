@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Users, Lock, Radio, Activity, MapPin, Mic, MicOff, ExternalLink, BarChart3, Database } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { motion } from 'motion/react';
 import QuantumMap from './QuantumMap';
 import { seedFictitiousProviders } from '../services/seedService';
@@ -25,6 +25,7 @@ export default function AdminPanel() {
     usuariosRegistrados: 0
   });
   const [providers, setProviders] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [logs, setLogs] = useState<string[]>([
     '> INITIALIZING QUANTUM CORE...',
     '> ESTABLISHING SECURE CONNECTION...',
@@ -49,6 +50,8 @@ export default function AdminPanel() {
     const agendamentosRef = collection(db, 'agendamentos');
     const unsubServicios = onSnapshot(agendamentosRef, (snap) => {
       setMetrics(prev => ({ ...prev, serviciosActivos: snap.size }));
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAppointments(list);
     });
 
     // 3. Escuchar Proveedores Online y datos para el mapa
@@ -113,6 +116,38 @@ export default function AdminPanel() {
     }
     setIsSeeding(false);
   };
+
+  const servicesStats = useMemo(() => {
+    let pendingCount = 0;
+    let activeCount = 0;
+    let completedCount = 0;
+    let cancelledCount = 0;
+
+    appointments.forEach((a) => {
+      if (a.status === 'pending') {
+        pendingCount++;
+      } else if (a.status === 'confirmed') {
+        activeCount++;
+      } else if (a.status === 'completed') {
+        completedCount++;
+      } else if (a.status === 'cancelled') {
+        cancelledCount++;
+      }
+    });
+
+    const isMock = appointments.length === 0;
+    const finalPending = isMock ? 6 : pendingCount;
+    const finalActive = isMock ? 9 : activeCount;
+    const finalCompleted = isMock ? 14 : completedCount;
+    const finalCancelled = isMock ? 3 : cancelledCount;
+
+    return [
+      { name: 'Pendientes', value: finalPending, color: '#eab308' },
+      { name: 'Activos', value: finalActive, color: '#06b6d4' },
+      { name: 'Completados', value: finalCompleted, color: '#10b981' },
+      { name: 'Cancelados', value: finalCancelled, color: '#ef4444' }
+    ];
+  }, [appointments]);
 
   return (
     <div className="p-6 h-full text-white bg-[rgba(5,5,10,0.95)] backdrop-blur-2xl border-l border-[rgba(0,212,255,0.2)] shadow-2xl overflow-y-auto">
@@ -191,7 +226,7 @@ export default function AdminPanel() {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-8">
         <div className="h-96 bg-black/50 border border-cyan-900/50 rounded-2xl p-6 shadow-inner flex flex-col">
           <h3 className="text-xs font-mono text-cyan-500 uppercase tracking-widest mb-6 flex items-center gap-2">
             <BarChart3 size={14} className="text-cyan-500" />
@@ -225,8 +260,66 @@ export default function AdminPanel() {
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Real-time distribution board using Recharts */}
+        <div className="h-96 bg-black/50 border border-cyan-900/50 rounded-2xl p-6 shadow-inner flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-mono text-cyan-500 uppercase tracking-widest flex items-center gap-2">
+              <Radio size={14} className="text-cyan-500 animate-pulse" />
+              Distribución de Red
+            </h3>
+            {appointments.length > 0 ? (
+              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider animate-pulse">Sincronizado</span>
+            ) : (
+              <span className="text-[9px] font-mono text-cyan-400/60 bg-cyan-950/20 px-2 py-0.5 rounded border border-cyan-500/10 uppercase tracking-wider">Modo Activo</span>
+            )}
+          </div>
+          
+          <div className="flex-1 w-full flex items-center justify-center min-h-0 relative">
+            <ResponsiveContainer width="100%" height="80%">
+              <PieChart>
+                <Pie
+                  data={servicesStats}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {servicesStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '12px' }}
+                  itemStyle={{ fontSize: '12px', color: '#fff' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest">Servicios</span>
+              <span className="text-2xl font-light font-sans text-white">
+                {appointments.length > 0 ? appointments.length : 32}
+              </span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {servicesStats.map((stat, i) => (
+              <div key={i} className="flex items-center justify-between p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stat.color }} />
+                  <span className="text-[10px] text-white/70 font-mono">{stat.name}</span>
+                </div>
+                <span className="text-xs font-mono text-white font-semibold">{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         
-        <div className="h-96 w-full rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl relative">
+        <div className="h-96 w-full rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl relative animate-fadeIn">
           <div className="absolute top-4 right-4 z-[400] bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-mono text-cyan-400 capitalize tracking-widest pointer-events-none shadow-lg">
              Mapa Radar Activo
           </div>

@@ -48,6 +48,15 @@ Inicia el servidor de desarrollo en el puerto 3000:
 npm run dev
 ```
 
+## Ejecución en GitHub Codespaces
+
+Este proyecto está completamente configurado para **GitHub Codespaces**:
+
+1. Crea un codespace a partir de este repositorio.
+2. La configuración en `.devcontainer/devcontainer.json` automatizará el aprovisionamiento instalando las dependencias (`npm install`) e iniciará las extensiones recomendadas de VS Code (ESLint, Prettier, Tailwind CSS).
+3. Asegúrate de configurar la clave de API de Gemini (`GEMINI_API_KEY`) y Firebase en tu entorno, o copia `.env.example` como `.env` e introduce tus claves.
+4. Lanza el servidor usando `npm run dev`. El puerto `3000` se redireccionará automáticamente para abrir la aplicación web directamente.
+
 ### 4. Producción (Contenedores)
 El proyecto está optimizado para despliegue en entornos modernos.
 ```bash
