@@ -62,7 +62,11 @@ export function useHugo() {
     setIsLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        const lat = Number(pos.coords.latitude);
+        const lng = Number(pos.coords.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          setUserLocation([lat, lng]);
+        }
         setIsLocationLoading(false);
       },
       (err) => {
@@ -190,9 +194,14 @@ export function useHugo() {
 
       await playTTS(result.hugo_mensaje);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro no Hugo Brain:", error);
       setOrbState('IDLE');
+      const errorMessage = String(error?.response?.data?.error || error?.message || error);
+      const fallbackMessage = (errorMessage.includes("429") || errorMessage.includes("quota"))
+        ? "Lo siento, se ha excedido el límite de cuota de IA gratuita. Por favor, inténtelo de nuevo más tarde."
+        : "He tenido un problema de conexión. ¿Puede repetirlo?";
+      setState(prev => ({ ...prev, hugo_mensaje: fallbackMessage }));
     }
   }, [userLocation, history]);
 

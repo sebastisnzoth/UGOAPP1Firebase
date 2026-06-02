@@ -1,8 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Users, Lock, Radio, Activity, MapPin, Mic, MicOff, ExternalLink, BarChart3 } from 'lucide-react';
+import { Users, Lock, Radio, Activity, MapPin, Mic, MicOff, ExternalLink, BarChart3, Database } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion } from 'motion/react';
 import QuantumMap from './QuantumMap';
+import { seedFictitiousProviders } from '../services/seedService';
+
+const mockChartData = [
+  { day: 'Lun', servicios: 12, boveda: 450 },
+  { day: 'Mar', servicios: 19, boveda: 980 },
+  { day: 'Mie', servicios: 15, boveda: 720 },
+  { day: 'Jue', servicios: 22, boveda: 1100 },
+  { day: 'Vie', servicios: 30, boveda: 1850 },
+  { day: 'Sab', servicios: 45, boveda: 2900 },
+  { day: 'Dom', servicios: 38, boveda: 2400 },
+];
 
 export default function AdminPanel() {
   const [metrics, setMetrics] = useState({
@@ -20,6 +33,7 @@ export default function AdminPanel() {
     '> LATENCIA: 12ms'
   ]);
   const [isListening, setIsListening] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -87,6 +101,19 @@ export default function AdminPanel() {
     setIsListening(!isListening);
   };
 
+  const handleSeed = async () => {
+    if (isSeeding) return;
+    setIsSeeding(true);
+    setLogs(prev => [...prev, '> INICIANDO SIEMBRA DE PROVEEDORES FICTICIOS...']);
+    const result = await seedFictitiousProviders();
+    if (result.success) {
+      setLogs(prev => [...prev, `> SIEMBRA COMPLETADA: ${result.count} PROVEEDORES CREADOS`]);
+    } else {
+      setLogs(prev => [...prev, '> ERROR AL CREAR PROVEEDORES FICTICIOS']);
+    }
+    setIsSeeding(false);
+  };
+
   return (
     <div className="p-6 h-full text-white bg-[rgba(5,5,10,0.95)] backdrop-blur-2xl border-l border-[rgba(0,212,255,0.2)] shadow-2xl overflow-y-auto">
       <div className="flex items-center justify-between mb-8">
@@ -94,6 +121,14 @@ export default function AdminPanel() {
           CENTRO DE COMANDO
         </h2>
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleSeed}
+            disabled={isSeeding}
+            className={`flex items-center gap-2 px-3 py-1 bg-purple-950/30 border border-purple-500/30 rounded-full hover:bg-purple-900/50 transition-colors ${isSeeding ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Database size={14} className="text-purple-400" />
+            <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest">Sembrar Proveedores</span>
+          </button>
           <a
             href="https://share.streamlit.io/"
             target="_blank"
@@ -117,27 +152,86 @@ export default function AdminPanel() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <motion.div 
+        variants={{
+          hidden: { opacity: 0 },
+          show: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.12
+            }
+          }
+        }}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8"
+      >
         {[
           { label: 'Fondos Bóveda', value: `$ ${metrics.bovedaTotal.toFixed(2)}`, icon: Lock, gradient: 'from-blue-600/20 to-cyan-500/20' },
           { label: 'Servicios Activos', value: metrics.serviciosActivos, icon: Activity, gradient: 'from-purple-600/20 to-indigo-500/20' },
           { label: 'Prestadores Online', value: metrics.prestadoresOnline, icon: Radio, gradient: 'from-emerald-600/20 to-teal-500/20' },
           { label: 'Usuarios', value: '---', icon: Users, gradient: 'from-amber-600/20 to-orange-500/20' }
         ].map((m, i) => (
-          <div key={i} className={`bg-gradient-to-br ${m.gradient} backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:border-cyan-500/50 transition-all shadow-lg`}>
+          <motion.div 
+            key={i} 
+            variants={{
+              hidden: { opacity: 0, y: 15, scale: 0.95 },
+              show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100, damping: 15 } }
+            }}
+            className={`bg-gradient-to-br ${m.gradient} backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:border-cyan-500/50 transition-all shadow-lg flex flex-col`}
+          >
             <div className="flex items-center gap-2 mb-3 text-white/60 text-[10px] uppercase tracking-widest">
               <m.icon size={14} className="text-cyan-400" />
               {m.label}
             </div>
-            <div className="font-mono text-2xl font-light text-white drop-shadow-md">
+            <div className="font-mono text-2xl font-light text-white drop-shadow-md mt-auto">
               {m.value}
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
-      <div className="h-96 w-full mb-8 rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl">
-        <QuantumMap center={{ lat: -34.6037, lng: -58.3816 }} providers={providers} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="h-96 bg-black/50 border border-cyan-900/50 rounded-2xl p-6 shadow-inner flex flex-col">
+          <h3 className="text-xs font-mono text-cyan-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+            <BarChart3 size={14} className="text-cyan-500" />
+            Evolución U.G.O (Servicios vs Bóveda)
+          </h3>
+          <div className="flex-1 w-full min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={mockChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorServicios" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorBoveda" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} width={40} />
+                <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} width={40} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '8px' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                  labelStyle={{ color: '#06b6d4', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}
+                />
+                <Area yAxisId="left" type="monotone" dataKey="servicios" name="Servicios" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorServicios)" />
+                <Area yAxisId="right" type="monotone" dataKey="boveda" name="Bóveda ($)" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorBoveda)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        <div className="h-96 w-full rounded-2xl overflow-hidden border border-cyan-500/30 shadow-2xl relative">
+          <div className="absolute top-4 right-4 z-[400] bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-mono text-cyan-400 capitalize tracking-widest pointer-events-none shadow-lg">
+             Mapa Radar Activo
+          </div>
+          <QuantumMap center={{ lat: -34.6037, lng: -58.3816 }} providers={providers} />
+        </div>
       </div>
       
       {/* Terminal Area */}

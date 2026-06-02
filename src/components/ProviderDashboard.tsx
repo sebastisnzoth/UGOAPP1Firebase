@@ -38,14 +38,17 @@ export default function ProviderDashboard({ providerId }: { providerId: string }
       if (!watchIdRef.current && navigator.geolocation) {
         watchIdRef.current = navigator.geolocation.watchPosition(
           async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            const profileRef = doc(db, 'profiles', providerId);
-            const providerRef = doc(db, 'profiles_providers', providerId);
-            try {
-              await updateDoc(profileRef, { lat: latitude, lng: longitude, latitude, longitude });
-              await updateDoc(providerRef, { lat: latitude, lng: longitude, latitude, longitude });
-            } catch (err) {
-              console.error("Failed to update location", err);
+            const lat = Number(pos.coords.latitude);
+            const lng = Number(pos.coords.longitude);
+            if (!isNaN(lat) && !isNaN(lng)) {
+              const profileRef = doc(db, 'profiles', providerId);
+              const providerRef = doc(db, 'profiles_providers', providerId);
+              try {
+                await updateDoc(profileRef, { lat, lng, latitude: lat, longitude: lng });
+                await updateDoc(providerRef, { lat, lng, latitude: lat, longitude: lng });
+              } catch (err) {
+                console.error("Failed to update location", err);
+              }
             }
           },
           (err) => console.error(err),

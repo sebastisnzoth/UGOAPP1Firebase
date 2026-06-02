@@ -82,3 +82,50 @@
   background-size: 30px 30px;
 }
 
+/* Premium Leaflet UI Control Overrides */
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important;
+  background-color: rgba(18, 18, 18, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.leaflet-bar a {
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: rgba(0, 242, 255, 0.2) !important;
+  color: #00f2ff !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: none !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(10, 10, 10, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 9px !important;
+  border-radius: 8px 0 0 0 !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.leaflet-control-attribution a {
+  color: #00f2ff !important;
+  text-decoration: none !important;
+}
+
+.custom-leaflet-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+

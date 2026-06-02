@@ -8,13 +8,45 @@
         "uid": { "type": "string" },
         "nombre": { "type": "string" },
         "email": { "type": "string" },
-        "tipo": { "type": "string", "enum": ["cliente", "prestador", "soberano"] },
-        "verificado": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["cliente", "proveedor", "administrador"] },
+        "karma": { "type": "number", "description": "Reputation Score governing network access" },
+        "disponible": { "type": "boolean" },
         "lat": { "type": "number" },
         "lng": { "type": "number" },
-        "bio_memoria": { "type": "array", "items": { "type": "string" } }
+        "bio_memoria": { "type": "string" }
       },
-      "required": ["uid", "nombre", "tipo"]
+      "required": ["uid", "nombre", "role"]
+    },
+    "ProviderRadar": {
+      "title": "ProviderRadar",
+      "description": "Real-time provider location update",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "nombre": { "type": "string" },
+        "disponible": { "type": "boolean" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "karma": { "type": "number" }
+      },
+      "required": ["uid", "disponible"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Logistical job booking / escrow transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clienteId": { "type": "string" },
+        "proveedorId": { "type": "string" },
+        "monto": { "type": "number" },
+        "estado": { "type": "string", "enum": ["ESPERANDO", "ASEGURADA", "LIBERADA_HITOS", "DISPUTA"] },
+        "detalles": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["clienteId", "proveedorId", "monto", "estado"]
     },
     "Contract": {
       "title": "Contract",
@@ -70,6 +102,14 @@
     "profiles/{uid}": {
       "schema": "UserProfile",
       "description": "User profiles"
+    },
+    "profiles_providers/{uid}": {
+      "schema": "ProviderRadar",
+      "description": "Provider active locations for live map tracking"
+    },
+    "bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Escrow bookings"
     },
     "contratos/{contratoId}": {
       "schema": "Contract",

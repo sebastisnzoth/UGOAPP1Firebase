@@ -1,34 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Validación de la cuenta raíz del propietario del sistema
+    
+    // Catch-all safety net: deny unrecognized resources by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Validación de la cuenta raíz del propietario del sistema (Soberano)
     function esSoberano() {
       return request.auth != null && request.auth.token.email == 'sebastianzoth@gmail.com';
     }
-    // El usuario está habilitado para operar servicios si su Karma es superior al umbral crítico
+
+    // El usuario está habilitado si su Karma es superior al umbral crítico (>= 40)
     function cuentaActiva() {
-      let user = get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
-      return user != null && user.karma >= 40;
+      let userPath = /databases/$(database)/documents/profiles/$(request.auth.uid);
+      return request.auth != null && (!exists(userPath) || get(userPath).data.get('karma', 100) >= 40);
     }
-    // Perfiles de Usuarios (Clientes y Proveedores)
+
+    // Perfiles de Usuarios (Clientes, Proveedores y Moderadores)
     match /profiles/{userId} {
-      // Allow read if authenticated or if it's a guest, or if it's to fetch providers
-      allow read: if true; 
-      allow write: if request.auth != null && (request.auth.uid == userId || esSoberano()) || userId == 'guest_user';
+      allow read: if true; // Permite al mapa y al contexto listar y obtener proveedores públicamente
+      
+      // Proteger contra escalación de privilegios propia
+      allow create: if true; // Cualquier usuario o sesión guest puede registrar su perfil básico
+      allow update: if esSoberano() || 
+                    (request.auth != null && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['karma', 'role', 'email'])) ||
+                    (userId == 'guest_user') || 
+                    (userId.matches('mock_.*'));
+      allow delete: if esSoberano();
     }
-    // Colección de Logs de Auditoría y Conversaciones en vivo con Hugo
-    match /comunicaciones/{document=**} {
-      allow read, write: if request.auth != null || esSoberano() || request.auth == null;
-    }
+
     // Directorio de Ubicación en Tiempo Real (Modo Uber)
-    match /profiles_providers/{document=**} {
-      allow read: if true;
-      allow write: if esSoberano() || request.auth != null;
+    match /profiles_providers/{providerId} {
+      allow read: if true; // Localización pública de proveedores disponibles para el mapa en vivo
+      allow write: if esSoberano() || 
+                    (request.auth != null && (request.auth.uid == providerId || providerId.matches('mock_.*')) && cuentaActiva()) ||
+                    (request.auth == null && (providerId == 'guest_user' || providerId.matches('mock_.*')));
     }
-    // Reservas de Servicios y Bóveda Escrow
+
+    // Reservas de Servicios y Bóveda Escrow (bookings y contratos)
     match /bookings/{bookingId} {
-      allow create: if request.auth != null || request.auth == null;
-      allow read, update: if request.auth != null || request.auth == null;
+      allow create: if request.auth != null ? cuentaActiva() : true;
+      allow read, update: if request.auth != null ? (cuentaActiva() || esSoberano()) : true;
+      allow delete: if esSoberano() || request.auth == null;
+    }
+
+    match /contratos/{contratoId} {
+      allow create: if request.auth != null ? cuentaActiva() : true;
+      allow read, update: if request.auth != null ? (cuentaActiva() || esSoberano()) : true;
+      allow delete: if esSoberano() || request.auth == null;
+    }
+
+    // Comunicaciones y logs de interacción
+    match /comunicaciones/{document=**} {
+      allow read, write: if true; // Permite flujos continuos de mensajes de soporte e interacción con Hugo
+    }
+
+    match /logs_hugo/{logId} {
+      allow create: if request.auth != null ? cuentaActiva() : true;
+      allow read: if request.auth != null ? (cuentaActiva() || esSoberano()) : true;
+      allow write, delete: if esSoberano() || request.auth == null;
     }
   }
 }

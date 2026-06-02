@@ -41,7 +41,7 @@ export default function App() {
   };
   
 	const { state, orbState, processMessage, analyzeMedia, sayWelcome, stopTTS, userLocation, requestLocation, isLocationLoading, selectProvider } = useHugo();
-  const { isActive: isLiveActive, startLive, stopLive, transcript: liveTranscript } = useLiveHugo();
+  const { isActive: isLiveActive, startLive, stopLive, transcript: liveTranscript, liveError } = useLiveHugo();
 
   // Watch for SHOW_PROVIDERS action to open drawer
   useEffect(() => {
@@ -211,6 +211,7 @@ export default function App() {
                 orbState={orbState}
                 isLiveActive={isLiveActive}
                 liveTranscript={liveTranscript}
+                liveError={liveError}
                 handleOrbClick={handleOrbClick}
                 onRequestLocation={requestLocation}
                 isLocationLoading={isLocationLoading}
