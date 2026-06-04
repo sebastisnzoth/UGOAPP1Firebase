@@ -30,14 +30,15 @@ export default function ClientAppLayout({
 }: ClientAppLayoutProps) {
   const { providers } = useProviders();
   const [hireConfirm, setHireConfirm] = useState(false);
-  const [mapTheme, setMapTheme] = useState<'dark' | 'satellite'>('dark');
+  const [mapTheme, setMapTheme] = useState<'dark' | 'satellite' | 'light'>('light');
   const [isAddingMock, setIsAddingMock] = useState(false);
   
   const filteredProviders = useMemo(() => {
     return providers.filter(p => {
       const lat = Number(p.latitude ?? p.lat);
       const lng = Number(p.longitude ?? p.lng);
-      return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
+      const isTestProvider = p.nombre?.toLowerCase().includes('test provider') || p.id?.startsWith('mock_') || p.uid?.startsWith('mock_') || p.id === 'test_provider';
+      return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0) && !isTestProvider;
     });
   }, [providers]);
 
@@ -137,13 +138,13 @@ export default function ClientAppLayout({
         <div className="hidden md:block w-full h-px bg-white/10 my-1"/>
         <div className="md:hidden h-full w-px bg-white/10 mx-1 self-stretch"/>
         <button 
-          onClick={() => setMapTheme(mapTheme === 'dark' ? 'satellite' : 'dark')}
+          onClick={() => setMapTheme(mapTheme === 'light' ? 'dark' : mapTheme === 'dark' ? 'satellite' : 'light')}
           className={cn(
             "p-3 rounded-full text-white transition-all duration-300 group",
-            mapTheme === 'satellite' ? "bg-quantum-cyan/20 text-quantum-cyan" : "hover:bg-white/10"
+            mapTheme === 'satellite' ? "bg-quantum-cyan/20 text-quantum-cyan" : mapTheme === 'light' ? "bg-white/20 text-white" : "hover:bg-white/10"
           )}
         >
-          <Layers size={20} className={mapTheme === 'satellite' ? "text-quantum-cyan" : "text-white/70 group-hover:text-white"} strokeWidth={1.5} />
+          <Layers size={20} className={mapTheme === 'satellite' ? "text-quantum-cyan" : mapTheme === 'light' ? "text-white" : "text-white/70 group-hover:text-white"} strokeWidth={1.5} />
         </button>
         <div className="hidden md:block w-full h-px bg-white/10 my-1"/>
         <div className="md:hidden h-full w-px bg-white/10 mx-1 self-stretch"/>

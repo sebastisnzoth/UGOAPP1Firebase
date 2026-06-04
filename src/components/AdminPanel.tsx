@@ -323,7 +323,7 @@ export default function AdminPanel() {
           <div className="absolute top-4 right-4 z-[400] bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-mono text-cyan-400 capitalize tracking-widest pointer-events-none shadow-lg">
              Mapa Radar Activo
           </div>
-          <QuantumMap center={{ lat: -34.6037, lng: -58.3816 }} providers={providers} />
+          <QuantumMap center={{ lat: -34.6037, lng: -58.3816 }} providers={providers.filter(p => !(p.nombre?.toLowerCase().includes('test provider') || p.id?.startsWith('mock_') || p.uid?.startsWith('mock_') || p.id === 'test_provider'))} />
         </div>
       </div>
       

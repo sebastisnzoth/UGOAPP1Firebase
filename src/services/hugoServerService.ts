@@ -66,7 +66,7 @@ export const hugoServerService = {
     let chunks: any[] | undefined;
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3.5-flash",
         contents: [...history, { role: "user", parts: [{ text: message }] }],
         config: {
           tools: [
@@ -170,7 +170,7 @@ export const hugoServerService = {
   async analyzeMedia(fileData: string, mimeType: string, prompt: string): Promise<string> {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3.5-flash",
         contents: [{
           role: 'user',
           parts: [
@@ -189,13 +189,21 @@ export const hugoServerService = {
   async tts(text: string): Promise<string | undefined> {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [{ role: 'user', parts: [{ text: `Diga con autoridade e calma: ${text}` }] }]
+        model: "gemini-3.1-flash-tts-preview",
+        contents: [{ parts: [{ text: `Diga com autoridade e calma: ${text}` }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Puck' },
+            },
+          },
+        },
       });
-      return undefined;
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      return base64Audio || undefined;
     } catch (e: any) {
        console.warn("TTS generation failed or quota exceeded.", e.message);
-       // Return undefined or a fallback message when failed so frontend handles it softly
        return undefined;
     }
   },
@@ -203,7 +211,7 @@ export const hugoServerService = {
   async think(query: string): Promise<string> {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-pro",
+        model: "gemini-3.1-pro-preview",
         contents: [{ role: 'user', parts: [{ text: query }] }]
       });
       return response.text || "Procesamiento no disponible.";

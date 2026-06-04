@@ -111,12 +111,12 @@ interface QuantumMapProps {
   center: { lat: number; lng: number };
   providers: Provider[];
   activeProviderId?: string;
-  mapTheme?: 'dark' | 'satellite';
+  mapTheme?: 'dark' | 'satellite' | 'light';
   onHire?: (providerName: string) => void;
   onSelectProvider?: (providerId: string) => void;
 }
 
-export default function QuantumMap({ center, providers, activeProviderId, mapTheme = 'dark', onHire, onSelectProvider }: QuantumMapProps) {
+export default function QuantumMap({ center, providers, activeProviderId, mapTheme = 'light', onHire, onSelectProvider }: QuantumMapProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | 'Todos'>('Todos');
   const [minRating, setMinRating] = useState(0);
   const [maxDistance, setMaxDistance] = useState(50); // KM
@@ -203,10 +203,14 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
 
   const tileUrl = mapTheme === 'satellite' 
     ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' 
+    : mapTheme === 'light'
+    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
     : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
     
   const attribution = mapTheme === 'satellite'
     ? '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    : mapTheme === 'light'
+    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
   return (
