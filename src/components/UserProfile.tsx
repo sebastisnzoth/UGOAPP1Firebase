@@ -1,8 +1,6 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Save, Edit2 } from 'lucide-react';
-import { cn } from '../lib/utils';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { Save, User, X } from 'lucide-react';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 
 interface UserProfileProps {
@@ -12,16 +10,31 @@ interface UserProfileProps {
 }
 
 interface UserProfileData {
+  uid?: string;
   nombre: string;
   contacto_preferido?: string;
-  email: string;
+  email?: string;
+  role?: 'cliente' | 'proveedor' | 'administrador';
+  categoria?: string;
+  especialidade?: string;
+  tarifa?: number;
+  bio?: string;
+  forma_pago?: 'efectivo' | 'mercado_pago';
+  disponible?: boolean;
+  rating?: number;
+  karma?: number;
+  foto?: string;
 }
 
 export default function UserProfile({ isOpen, onClose, userId }: UserProfileProps) {
-  const [profile, setProfile] = useState<UserProfileData>({ nombre: '', email: '', contacto_preferido: '' });
-  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState<UserProfileData>({
+    nombre: '',
+    contacto_preferido: '',
+    forma_pago: 'efectivo',
+  });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !userId) return;
@@ -32,10 +45,14 @@ export default function UserProfile({ isOpen, onClose, userId }: UserProfileProp
         const userRef = doc(db, 'profiles', userId);
         const docSnap = await getDoc(userRef);
         if (docSnap.exists()) {
-          setProfile(docSnap.data() as UserProfileData);
+          const data = docSnap.data() as UserProfileData;
+          setProfile({
+            ...data,
+            forma_pago: data.forma_pago || 'efectivo',
+          });
         }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, 'profiles');
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, 'profiles');
       } finally {
         setLoading(false);
       }
@@ -45,101 +62,228 @@ export default function UserProfile({ isOpen, onClose, userId }: UserProfileProp
   }, [isOpen, userId]);
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
+    setSaved(false);
+
     try {
       const userRef = doc(db, 'profiles', userId);
-      await updateDoc(userRef, {
-        nombre: profile.nombre,
-        contacto_preferido: profile.contacto_preferido
-      });
-      setIsEditing(false);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'profiles');
+      const publicFields = {
+        nombre: profile.nombre.trim(),
+        contacto_preferido: profile.contacto_preferido?.trim() || '',
+        forma_pago: profile.forma_pago || 'efectivo',
+        ...(profile.role === 'proveedor'
+          ? {
+              categoria: profile.categoria?.trim() || '',
+              especialidade: profile.especialidade?.trim() || '',
+              tarifa: Number(profile.tarifa || 0),
+              precio: Number(profile.tarifa || 0),
+              bio: profile.bio?.trim() || '',
+            }
+          : {}),
+      };
+
+      await updateDoc(userRef, publicFields);
+
+      if (profile.role === 'proveedor') {
+        await setDoc(
+          doc(db, 'profiles_providers', userId),
+          {
+            uid: userId,
+            nombre: profile.nombre.trim(),
+            role: 'proveedor',
+            categoria: profile.categoria?.trim() || '',
+            especialidade: profile.especialidade?.trim() || '',
+            tarifa: Number(profile.tarifa || 0),
+            precio: Number(profile.tarifa || 0),
+            bio_memoria: profile.bio?.trim() || '',
+            foto: profile.foto || '',
+            rating: Number(profile.rating || 5),
+            karma: Number(profile.karma || 100),
+            disponible: Boolean(profile.disponible),
+            forma_pago: profile.forma_pago || 'efectivo',
+          },
+          { merge: true }
+        );
+      }
+
+      setSaved(true);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'profiles');
     } finally {
       setSaving(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
+    <div className="min-h-full rounded-[2rem] border border-white/10 bg-quantum-card p-5 text-white shadow-2xl md:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-quantum-cyan">Perfil UGO</p>
+          <h2 className="mt-1 flex items-center gap-2 text-2xl font-bold">
+            <User size={22} className="text-quantum-cyan" /> Mi perfil
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full bg-white/5 p-2 text-white/55 hover:bg-white/10 hover:text-white"
+          aria-label="Cerrar perfil"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="mt-8 text-center text-sm text-white/45">Cargando perfil…</p>
+      ) : (
+        <div className="mt-6 space-y-4">
+          <Field
+            label="Nombre"
+            value={profile.nombre}
+            onChange={(value) => setProfile((current) => ({ ...current, nombre: value }))}
           />
 
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-quantum-card/95 backdrop-blur-2xl border-l border-white/10 z-50 shadow-[-10px_0_40px_rgba(0,0,0,0.5)] flex flex-col"
-          >
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <User className="text-quantum-cyan" size={24} />
-                Meu Perfil
-              </h2>
-              <button onClick={onClose} className="p-2 hover:bg-white/10 text-white/70 rounded-full transition-colors">
-                <X size={20} />
+          <Field
+            label="Contacto preferido"
+            value={profile.contacto_preferido || ''}
+            placeholder="WhatsApp, teléfono o email"
+            onChange={(value) => setProfile((current) => ({ ...current, contacto_preferido: value }))}
+          />
+
+          {profile.role === 'proveedor' && (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field
+                  label="Categoría"
+                  value={profile.categoria || ''}
+                  placeholder="Electricidad"
+                  onChange={(value) => setProfile((current) => ({ ...current, categoria: value }))}
+                />
+                <Field
+                  label="Especialidad"
+                  value={profile.especialidade || ''}
+                  placeholder="Instalaciones"
+                  onChange={(value) => setProfile((current) => ({ ...current, especialidade: value }))}
+                />
+              </div>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/40">
+                  Tarifa por hora
+                </span>
+                <div className="flex items-center rounded-2xl border border-white/10 bg-black/20 px-4">
+                  <span className="text-sm font-bold text-quantum-cyan">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={profile.tarifa ?? ''}
+                    onChange={(event) =>
+                      setProfile((current) => ({
+                        ...current,
+                        tarifa: Number(event.target.value),
+                      }))
+                    }
+                    className="w-full bg-transparent px-3 py-3 text-white outline-none"
+                    placeholder="0"
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/40">
+                  Descripción profesional
+                </span>
+                <textarea
+                  value={profile.bio || ''}
+                  onChange={(event) =>
+                    setProfile((current) => ({ ...current, bio: event.target.value }))
+                  }
+                  className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white outline-none focus:border-quantum-cyan/60"
+                  placeholder="Contá brevemente qué trabajos realizás."
+                />
+              </label>
+            </>
+          )}
+
+          <div>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/40">
+              Forma de pago predeterminada
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setProfile((current) => ({ ...current, forma_pago: 'efectivo' }))}
+                className={`rounded-2xl border px-4 py-3 text-sm font-bold ${
+                  profile.forma_pago !== 'mercado_pago'
+                    ? 'border-quantum-cyan bg-quantum-cyan/15 text-quantum-cyan'
+                    : 'border-white/10 bg-white/5 text-white/55'
+                }`}
+              >
+                Efectivo
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfile((current) => ({ ...current, forma_pago: 'mercado_pago' }))}
+                className={`rounded-2xl border px-4 py-3 text-sm font-bold ${
+                  profile.forma_pago === 'mercado_pago'
+                    ? 'border-quantum-cyan bg-quantum-cyan/15 text-quantum-cyan'
+                    : 'border-white/10 bg-white/5 text-white/55'
+                }`}
+              >
+                Mercado Pago
               </button>
             </div>
+            <p className="mt-2 text-xs text-white/35">
+              Efectivo queda seleccionado por defecto y nunca bloquea la solicitud de un servicio.
+            </p>
+          </div>
 
-            <div className="flex-1 p-6 space-y-6">
-              {loading ? (
-                <div className="text-white/50 text-center pt-10">Carregando perfil...</div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-white/50 uppercase tracking-widest mb-2 block">Nome Completo</label>
-                    <input 
-                      type="text"
-                      disabled={!isEditing}
-                      value={profile.nombre}
-                      onChange={(e) => setProfile({...profile, nombre: e.target.value})}
-                      className={cn("w-full bg-black/20 border rounded-xl p-3 text-white transition-colors", isEditing ? "border-quantum-cyan focus:border-quantum-cyan outline-none" : "border-transparent")}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-white/50 uppercase tracking-widest mb-2 block">Método de Contato Preferido</label>
-                    <input 
-                      type="text"
-                      disabled={!isEditing}
-                      placeholder="Ex: WhatsApp ou Email"
-                      value={profile.contacto_preferido || ''}
-                      onChange={(e) => setProfile({...profile, contacto_preferido: e.target.value})}
-                      className={cn("w-full bg-black/20 border rounded-xl p-3 text-white transition-colors", isEditing ? "border-quantum-cyan focus:border-quantum-cyan outline-none" : "border-transparent")}
-                    />
-                  </div>
-                  
-                  <div className="pt-6">
-                    {isEditing ? (
-                      <button 
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="w-full flex items-center justify-center gap-2 bg-quantum-cyan text-black py-3 rounded-xl font-bold hover:bg-white transition-all"
-                      >
-                        {saving ? 'Salvando...' : <><Save size={18} /> Salvar Alterações</>}
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => setIsEditing(true)}
-                        className="w-full flex items-center justify-center gap-2 bg-white/10 text-white py-3 rounded-xl font-bold hover:bg-white/20 transition-all"
-                      >
-                        <Edit2 size={18} /> Editar Perfil
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </>
+          {saved && (
+            <p className="rounded-xl bg-emerald-500/10 p-3 text-xs font-medium text-emerald-200">
+              Perfil actualizado.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !profile.nombre.trim()}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-quantum-cyan px-4 py-3 font-bold text-black disabled:opacity-40"
+          >
+            <Save size={17} />
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
       )}
-    </AnimatePresence>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/40">{label}</span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-quantum-cyan/60"
+      />
+    </label>
   );
 }
