@@ -76,6 +76,7 @@ export interface Message {
 
 export interface Review {
   id: string;
+  bookingId: string;
   providerId: string;
   clientId: string;
   rating: number;
