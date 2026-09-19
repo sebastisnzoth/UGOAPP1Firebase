@@ -3,6 +3,7 @@ import QuantumMap from './QuantumMap';
 import HugoOrb from './HugoOrb';
 import ConfirmationDialog from './ConfirmationDialog';
 import ClientActiveService from './ClientActiveService';
+import ClientReviewPrompt from './ClientReviewPrompt';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Layers, MapPin, MessageCircle } from 'lucide-react';
@@ -128,6 +129,7 @@ export default function ClientAppLayout({
   return (
     <div className="relative h-[100dvh] w-screen overflow-hidden bg-black">
       <ClientActiveService userId={user.uid} />
+      <ClientReviewPrompt userId={user.uid} />
 
       <ConfirmationDialog
         isOpen={hireConfirm}
@@ -203,6 +205,12 @@ export default function ClientAppLayout({
                     </h2>
                     <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-quantum-cyan">
                       {selectedProvider.categoria || 'Profesional UGO'}
+                    </p>
+                    <p className="mt-2 text-xs text-white/45">
+                      ★ {Number(selectedProvider.rating || 0).toFixed(1)}
+                      {selectedProvider.reviewsCount
+                        ? ` · ${selectedProvider.reviewsCount} reseña${selectedProvider.reviewsCount === 1 ? '' : 's'}`
+                        : ' · Sin reseñas todavía'}
                     </p>
                   </div>
                   <span
