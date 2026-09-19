@@ -101,7 +101,26 @@ service cloud.firestore {
 
     match /profiles_providers/{providerId} {
       allow read: if true;
-      allow write: if esSoberano() || (isOwner(providerId) && esProveedor(providerId) && cuentaActiva());
+
+      allow create: if esSoberano() || (
+        isOwner(providerId)
+        && esProveedor(providerId)
+        && cuentaActiva()
+        && request.resource.data.get('uid', providerId) == providerId
+        && request.resource.data.get('role', 'proveedor') == 'proveedor'
+        && !request.resource.data.keys().hasAny(['rating', 'karma'])
+      );
+
+      allow update: if esSoberano() || (
+        isOwner(providerId)
+        && esProveedor(providerId)
+        && cuentaActiva()
+        && request.resource.data.get('uid', providerId) == providerId
+        && request.resource.data.get('role', 'proveedor') == 'proveedor'
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rating', 'karma'])
+      );
+
+      allow delete: if esSoberano() || isOwner(providerId);
     }
 
     match /bookings/{bookingId} {
