@@ -1,16 +1,18 @@
 {
-  "name": "Quantum App",
-  "short_name": "Quantum",
-  "description": "Aplicativo de busca de provedores",
+  "name": "UGO — Servicios",
+  "short_name": "UGO",
+  "description": "Un pedido. Un profesional. Sin vueltas.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "icons": [
     {
-      "src": "/vite.svg",
-      "sizes": "48x48 72x72 96x96 128x128 256x256",
-      "type": "image/svg+xml"
+      "src": "/ugo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
