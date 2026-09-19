@@ -57,15 +57,28 @@ export interface CreateBookingInput {
 }
 
 export async function createBooking(input: CreateBookingInput) {
-  return addDoc(collection(db, 'bookings'), {
-    ...input,
+  const payload: Record<string, unknown> = {
+    clienteId: input.clienteId,
+    clienteNombre: input.clienteNombre,
+    proveedorId: input.proveedorId,
+    proveedorNombre: input.proveedorNombre,
+    servicio: input.servicio,
+    monto: Number(input.monto || 0),
     estado_servicio: 'solicitado' satisfies ServiceStatus,
     paymentMethod: 'efectivo',
     paymentStatus: 'pendiente',
     scheduledFor: input.scheduledFor || null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  };
+
+  if (input.categoria) payload.categoria = input.categoria;
+  if (typeof input.precioHora === 'number' && Number.isFinite(input.precioHora)) {
+    payload.precioHora = input.precioHora;
+  }
+  if (input.location) payload.location = input.location;
+
+  return addDoc(collection(db, 'bookings'), payload);
 }
 
 export async function transitionBooking(
