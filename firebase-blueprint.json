@@ -5,48 +5,161 @@
       "description": "User profile data",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "nombre": { "type": "string" },
-        "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["cliente", "proveedor", "administrador"] },
-        "karma": { "type": "number", "description": "Reputation Score governing network access" },
-        "disponible": { "type": "boolean" },
-        "lat": { "type": "number" },
-        "lng": { "type": "number" },
-        "bio_memoria": { "type": "string" }
+        "uid": {
+          "type": "string"
+        },
+        "nombre": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "cliente",
+            "proveedor",
+            "administrador"
+          ]
+        },
+        "karma": {
+          "type": "number",
+          "description": "Reputation Score governing network access"
+        },
+        "disponible": {
+          "type": "boolean"
+        },
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        },
+        "bio_memoria": {
+          "type": "string"
+        }
       },
-      "required": ["uid", "nombre", "role"]
+      "required": [
+        "uid",
+        "nombre",
+        "role"
+      ]
     },
     "ProviderRadar": {
       "title": "ProviderRadar",
       "description": "Real-time provider location update",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "nombre": { "type": "string" },
-        "disponible": { "type": "boolean" },
-        "lat": { "type": "number" },
-        "lng": { "type": "number" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "karma": { "type": "number" }
+        "uid": {
+          "type": "string"
+        },
+        "nombre": {
+          "type": "string"
+        },
+        "disponible": {
+          "type": "boolean"
+        },
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "karma": {
+          "type": "number"
+        }
       },
-      "required": ["uid", "disponible"]
+      "required": [
+        "uid",
+        "disponible"
+      ]
     },
     "Booking": {
       "title": "Booking",
-      "description": "Logistical job booking / escrow transaction",
+      "description": "Canonical UGO service lifecycle shared by client and provider",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "clienteId": { "type": "string" },
-        "proveedorId": { "type": "string" },
-        "monto": { "type": "number" },
-        "estado": { "type": "string", "enum": ["ESPERANDO", "ASEGURADA", "LIBERADA_HITOS", "DISPUTA"] },
-        "detalles": { "type": "string" },
-        "timestamp": { "type": "number" }
+        "clienteId": {
+          "type": "string"
+        },
+        "clienteNombre": {
+          "type": "string"
+        },
+        "proveedorId": {
+          "type": "string"
+        },
+        "proveedorNombre": {
+          "type": "string"
+        },
+        "servicio": {
+          "type": "string"
+        },
+        "categoria": {
+          "type": "string"
+        },
+        "monto": {
+          "type": "number"
+        },
+        "precioHora": {
+          "type": "number"
+        },
+        "estado_servicio": {
+          "type": "string",
+          "enum": [
+            "solicitado",
+            "aceptado",
+            "en_camino",
+            "en_curso",
+            "pendiente_confirmacion_cliente",
+            "pendiente_pago",
+            "pago_informado",
+            "cerrado",
+            "cancelado"
+          ]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": [
+            "efectivo",
+            "mercado_pago"
+          ]
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": [
+            "pendiente",
+            "informado",
+            "confirmado"
+          ]
+        },
+        "scheduledFor": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "number"
+        }
       },
-      "required": ["clienteId", "proveedorId", "monto", "estado"]
+      "required": [
+        "clienteId",
+        "proveedorId",
+        "servicio",
+        "monto",
+        "estado_servicio",
+        "paymentMethod",
+        "paymentStatus"
+      ]
     },
     "Contract": {
       "title": "Contract",
@@ -56,46 +169,87 @@
         "participantes": {
           "type": "object",
           "properties": {
-            "cliente_id": { "type": "string" },
-            "prestador_id": { "type": "string" }
+            "cliente_id": {
+              "type": "string"
+            },
+            "prestador_id": {
+              "type": "string"
+            }
           }
         },
-        "estado": { "type": "string", "enum": ["solicitado", "bloqueado", "en_curso", "completado", "disputa"] },
+        "estado": {
+          "type": "string",
+          "enum": [
+            "solicitado",
+            "bloqueado",
+            "en_curso",
+            "completado",
+            "disputa"
+          ]
+        },
         "datos_financieros": {
           "type": "object",
           "properties": {
-            "monto_total": { "type": "number" },
-            "codigo_liberacion": { "type": "string" },
-            "timestamp": { "type": "number" }
+            "monto_total": {
+              "type": "number"
+            },
+            "codigo_liberacion": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
           }
         },
         "metadatos": {
           "type": "object",
           "properties": {
-            "categoria": { "type": "string" },
-            "fecha_agendada": { "type": "number" }
+            "categoria": {
+              "type": "string"
+            },
+            "fecha_agendada": {
+              "type": "number"
+            }
           }
         }
       },
-      "required": ["participantes", "estado", "datos_financieros"]
+      "required": [
+        "participantes",
+        "estado",
+        "datos_financieros"
+      ]
     },
     "HugoLog": {
       "title": "HugoLog",
       "description": "Logs of Hugo's interactions",
       "type": "object",
       "properties": {
-        "timestamp": { "type": "number" },
-        "usuario_id": { "type": "string" },
+        "timestamp": {
+          "type": "number"
+        },
+        "usuario_id": {
+          "type": "string"
+        },
         "interaccion": {
           "type": "object",
           "properties": {
-            "input": { "type": "string" },
-            "respuesta": { "type": "string" },
-            "estrategia_propuesta": { "type": "string" }
+            "input": {
+              "type": "string"
+            },
+            "respuesta": {
+              "type": "string"
+            },
+            "estrategia_propuesta": {
+              "type": "string"
+            }
           }
         }
       },
-      "required": ["timestamp", "usuario_id", "interaccion"]
+      "required": [
+        "timestamp",
+        "usuario_id",
+        "interaccion"
+      ]
     }
   },
   "firestore": {
@@ -109,11 +263,11 @@
     },
     "bookings/{bookingId}": {
       "schema": "Booking",
-      "description": "Escrow bookings"
+      "description": "Canonical service record and source of truth for the Client/Provider lifecycle"
     },
     "contratos/{contratoId}": {
       "schema": "Contract",
-      "description": "Escrow contracts"
+      "description": "Legacy escrow contract records. New service state must live in bookings."
     },
     "logs_hugo/{logId}": {
       "schema": "HugoLog",
