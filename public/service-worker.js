@@ -1,74 +1,54 @@
-const CACHE_NAME = 'ugo-os-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+const CACHE_NAME = 'ugo-os-cache-v2';
+const APP_SHELL = ['/', '/index.html', '/manifest.json', '/ugo-icon.svg'];
 
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)))
+      )
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
           return response;
-        }
-
-        // IMPORTANT: Clone the request. A request is a stream and
-        // can only be consumed once.
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then(
-          response => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // IMPORTANT: Clone the response. A response is a stream
-            // and because we want the browser to consume the response
-            // as well as the cache consuming the response, we need
-            // to clone it so we have two streams.
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                // Ignore non-GET requests for caching (e.g., POST)
-                // Ignore API requests
-                if (event.request.method === 'GET' && !event.request.url.includes('/api/')) {
-                   cache.put(event.request, responseToCache);
-                }
-              });
-
-            return response;
-          }
-        );
-      })
-  );
-});
-
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
-
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
         })
-      );
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      const network = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || network;
     })
   );
 });
