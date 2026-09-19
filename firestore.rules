@@ -1,66 +1,122 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Catch-all safety net: deny unrecognized resources by default
-    match /{document=**} {
-      allow read, write: if false;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // Validación de la cuenta raíz del propietario del sistema (Soberano)
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
     function esSoberano() {
-      return request.auth != null && request.auth.token.email == 'sebastianzoth@gmail.com';
+      return signedIn() && request.auth.token.email == 'sebastianzoth@gmail.com';
     }
 
-    // El usuario está habilitado si su Karma es superior al umbral crítico (>= 40)
     function cuentaActiva() {
       let userPath = /databases/$(database)/documents/profiles/$(request.auth.uid);
-      return request.auth != null && (!exists(userPath) || get(userPath).data.get('karma', 100) >= 40);
+      return signedIn() && (!exists(userPath) || get(userPath).data.get('karma', 100) >= 40);
     }
 
-    // Perfiles de Usuarios (Clientes, Proveedores y Moderadores)
+    function esProveedor(userId) {
+      let userPath = /databases/$(database)/documents/profiles/$(userId);
+      return exists(userPath) && get(userPath).data.role == 'proveedor';
+    }
+
+    function isParticipant(data) {
+      return signedIn() && (
+        data.get('clienteId', '') == request.auth.uid
+        || data.get('clientId', '') == request.auth.uid
+        || data.get('proveedorId', '') == request.auth.uid
+        || data.get('providerId', '') == request.auth.uid
+      );
+    }
+
     match /profiles/{userId} {
-      allow read: if true; // Permite al mapa y al contexto listar y obtener proveedores públicamente
-      
-      // Proteger contra escalación de privilegios propia
-      allow create: if true; // Cualquier usuario o sesión guest puede registrar su perfil básico
-      allow update: if esSoberano() || 
-                    (request.auth != null && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['karma', 'role', 'email'])) ||
-                    (userId == 'guest_user') || 
-                    (userId.matches('mock_.*'));
+      allow read: if true;
+
+      allow create: if isOwner(userId)
+                    && request.resource.data.uid == userId
+                    && request.resource.data.role in ['cliente', 'proveedor'];
+
+      allow update: if esSoberano() || (
+        isOwner(userId)
+        && cuentaActiva()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['karma', 'email'])
+        && (
+          request.resource.data.role == resource.data.role
+          || (!('role' in resource.data) && request.resource.data.role in ['cliente', 'proveedor'])
+        )
+      );
+
+      allow delete: if esSoberano() || isOwner(userId);
+    }
+
+    match /profiles_providers/{providerId} {
+      allow read: if true;
+      allow write: if esSoberano() || (isOwner(providerId) && esProveedor(providerId) && cuentaActiva());
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if esSoberano() || (cuentaActiva() && isParticipant(request.resource.data));
+      allow read, update: if esSoberano() || (cuentaActiva() && isParticipant(resource.data));
       allow delete: if esSoberano();
     }
 
-    // Directorio de Ubicación en Tiempo Real (Modo Uber)
-    match /profiles_providers/{providerId} {
-      allow read: if true; // Localización pública de proveedores disponibles para el mapa en vivo
-      allow write: if esSoberano() || 
-                    (request.auth != null && (request.auth.uid == providerId || providerId.matches('mock_.*')) && cuentaActiva()) ||
-                    (request.auth == null && (providerId == 'guest_user' || providerId.matches('mock_.*')));
-    }
-
-    // Reservas de Servicios y Bóveda Escrow (bookings y contratos)
-    match /bookings/{bookingId} {
-      allow create: if request.auth != null ? cuentaActiva() : true;
-      allow read, update: if request.auth != null ? (cuentaActiva() || esSoberano()) : true;
-      allow delete: if esSoberano() || request.auth == null;
-    }
-
     match /contratos/{contratoId} {
-      allow create: if request.auth != null ? cuentaActiva() : true;
-      allow read, update: if request.auth != null ? (cuentaActiva() || esSoberano()) : true;
-      allow delete: if esSoberano() || request.auth == null;
+      allow create: if esSoberano() || (cuentaActiva() && isParticipant(request.resource.data));
+      allow read, update: if esSoberano() || (cuentaActiva() && isParticipant(resource.data));
+      allow delete: if esSoberano();
     }
 
-    // Comunicaciones y logs de interacción
-    match /comunicaciones/{document=**} {
-      allow read, write: if true; // Permite flujos continuos de mensajes de soporte e interacción con Hugo
+    match /comunicaciones/{messageId} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if esSoberano() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update, delete: if esSoberano();
     }
 
     match /logs_hugo/{logId} {
-      allow create: if request.auth != null ? cuentaActiva() : true;
-      allow read: if request.auth != null ? (cuentaActiva() || esSoberano()) : true;
-      allow write, delete: if esSoberano() || request.auth == null;
+      allow create: if signedIn() && request.resource.data.usuario_id == request.auth.uid;
+      allow read: if esSoberano() || (signedIn() && resource.data.usuario_id == request.auth.uid);
+      allow update, delete: if esSoberano();
+    }
+
+    match /mensagens/{messageId} {
+      allow create: if signedIn() && request.resource.data.senderId == request.auth.uid;
+      allow read: if signedIn() && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
+    match /avaliacoes/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if esSoberano();
+    }
+
+    match /agendamentos/{appointmentId} {
+      allow create: if signedIn() && request.resource.data.clientId == request.auth.uid;
+      allow read, update: if esSoberano() || (signedIn() && (resource.data.clientId == request.auth.uid || resource.data.providerId == request.auth.uid));
+      allow delete: if esSoberano();
+    }
+
+    match /notifications/{notificationId} {
+      allow create: if esSoberano();
+      allow read, update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if esSoberano();
+    }
+
+    match /wallets/{userId} {
+      allow read, create: if isOwner(userId);
+      allow update, delete: if esSoberano();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if esSoberano();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
