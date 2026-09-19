@@ -24,13 +24,22 @@ const labels: Record<ServiceStatus, string> = {
 export default function ClientActiveService({ userId }: { userId: string }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [busy, setBusy] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => subscribeToClientBookings(userId, setBookings), [userId]);
 
   const booking = useMemo(() => {
     return sortBookingsNewestFirst(bookings).find((item) => !CLOSED_SERVICE_STATUSES.has(item.estado_servicio));
   }, [bookings]);
+
+  useEffect(() => {
+    if (
+      booking &&
+      ['pendiente_confirmacion_cliente', 'pendiente_pago'].includes(booking.estado_servicio)
+    ) {
+      setCollapsed(false);
+    }
+  }, [booking?.estado_servicio]);
 
   if (!booking) return null;
 
