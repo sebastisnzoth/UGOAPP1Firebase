@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../firebase';
 
@@ -20,10 +20,9 @@ export function ProvidersProvider({ children, isAuthReady, user }: { children: R
       return;
     }
     
-    const providersRef = collection(db, 'profiles');
-    const q = query(providersRef, where('role', '==', 'proveedor'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const providersRef = collection(db, 'profiles_providers');
+
+    const unsubscribe = onSnapshot(providersRef, (snapshot) => {
       const providersList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -31,7 +30,7 @@ export function ProvidersProvider({ children, isAuthReady, user }: { children: R
       setProviders(providersList);
       setIsLoading(false);
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'profiles (providers context)');
+      handleFirestoreError(err, OperationType.GET, 'profiles_providers (providers context)');
       setIsLoading(false);
     });
 
