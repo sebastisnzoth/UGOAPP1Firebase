@@ -80,7 +80,7 @@ service cloud.firestore {
     }
 
     match /profiles/{userId} {
-      allow read: if true;
+      allow read: if esSoberano() || isOwner(userId);
 
       allow create: if isOwner(userId)
                     && request.resource.data.uid == userId
