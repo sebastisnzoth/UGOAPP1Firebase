@@ -179,7 +179,7 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
     const lat = Number(center?.lat);
     const lng = Number(center?.lng);
     if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
-      return { lat: -34.6037, lng: -58.3816 };
+      return { lat: -27.5945, lng: -48.5477 };
     }
     return { lat, lng };
   }, [center]);
