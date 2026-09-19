@@ -1,37 +1,34 @@
-import { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { HashRouter } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
+import { collection, doc, getDoc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { useHugo } from './hooks/useHugo';
 import { useLiveHugo } from './hooks/useLiveHugo';
-import HugoOrb from './components/HugoOrb';
-import QuantumMap from './components/QuantumMap';
-import ProviderDrawer from './components/ProviderDrawer';
 import ServiceHistory from './components/ServiceHistory';
 import UserProfile from './components/UserProfile';
 import WalletView from './components/WalletView';
 import CalendarView from './components/CalendarView';
 import ChatWindow from './components/ChatWindow';
 import DashboardNavigation from './components/DashboardNavigation';
-import NotificationBell from './components/NotificationBell';
 import ProviderDashboard from './components/ProviderDashboard';
 import AdminPanel from './components/AdminPanel';
 import RoleSelection from './components/RoleSelection';
 import ClientAppLayout from './components/ClientAppLayout';
-import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType, signInWithGoogle } from './firebase';
-import { onAuthStateChanged, User, signInAnonymously } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, getDoc, serverTimestamp, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { cn } from './lib/utils';
-import { History, User as UserIcon, Calendar } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
-import { getUserRole } from './lib/auth';
+import { getUserRole, type UserRole } from './lib/auth';
 import { ProvidersProvider } from './contexts/ProvidersContext';
+import 'leaflet/dist/leaflet.css';
+
+type ViewId = 'map' | 'wallet' | 'calendar' | 'history' | 'profile' | 'provider' | 'admin';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
-  const [activeView, setActiveView] = useState('map'); // 'map' | 'wallet' | 'calendar' | 'history' | 'profile' | 'provider' | 'admin'
+  const [activeView, setActiveView] = useState<ViewId>('map');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatTarget, setActiveChatTarget] = useState<string | null>(null);
 
@@ -39,219 +36,202 @@ export default function App() {
     setActiveChatTarget(providerId);
     setIsChatOpen(true);
   };
-  
-	const { state, orbState, processMessage, analyzeMedia, sayWelcome, stopTTS, userLocation, requestLocation, isLocationLoading, selectProvider } = useHugo();
+
+  const {
+    state,
+    orbState,
+    processMessage,
+    stopTTS,
+    userLocation,
+    requestLocation,
+    isLocationLoading,
+    selectProvider,
+  } = useHugo();
   const { isActive: isLiveActive, startLive, stopLive, transcript: liveTranscript, liveError } = useLiveHugo();
 
-  // Watch for SHOW_PROVIDERS action to open drawer
   useEffect(() => {
-    if (state.ui_action === 'SHOW_PROVIDERS' && state.datos?.proveedores && state.datos.proveedores.length > 0) {
+    if (state.ui_action === 'SHOW_PROVIDERS' && state.datos?.proveedores?.length > 0) {
       setActiveView('map');
     }
   }, [state.ui_action, state.datos?.proveedores]);
 
-  // Auth Listener
   useEffect(() => {
-    let triedAnon = false;
+    let triedAnonymousLogin = false;
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setIsAuthReady(true);
-        
-        // Sync user profile to Firestore
-        const userRef = doc(db, 'profiles', currentUser.uid);
-        
-        try {
-          const docSnap = await getDoc(userRef);
-          if (!docSnap.exists()) {
-            // New user, show role selection
-            setShowRoleSelection(true);
-            setDoc(userRef, {
-              uid: currentUser.uid,
-              nombre: currentUser.displayName || 'Usuário Quantum',
-              updatedAt: serverTimestamp(),
-              createdAt: serverTimestamp()
-            }).catch(err => handleFirestoreError(err, OperationType.WRITE, `profiles/${currentUser.uid}`));
-          } else {
-            const data = docSnap.data();
-            if(!data.role) {
-                setShowRoleSelection(true);
-            } else {
-                // Redirección basada en rol al iniciar sesión
-                const role = await getUserRole(currentUser.uid);
-                setUserRole(role);
-                if (role === 'administrador') setActiveView('admin');
-                else if (role === 'proveedor') setActiveView('provider');
-                else setActiveView('map');
-            }
-          }
-        } catch (err) {
-          handleFirestoreError(err, OperationType.GET, `profiles/${currentUser.uid}`);
-        }
-      } else {
-        if (!triedAnon) {
-          triedAnon = true;
+      if (!currentUser) {
+        setUser(null);
+        setUserRole(null);
+
+        if (!triedAnonymousLogin) {
+          triedAnonymousLogin = true;
           try {
             await signInAnonymously(auth);
+            return;
           } catch (error) {
-            console.warn("Anonymous sign in failed, bypassing with hardcoded guest session:", error);
-            const guestUserObj = {
-              uid: 'guest_user',
-              displayName: 'Invitado Quantum',
-              email: 'guest@quantum-os.com',
-              emailVerified: true,
-              isAnonymous: true,
-              metadata: {},
-              providerData: [],
-              providerId: 'firebase',
-              tenantId: null,
-              delete: async () => {},
-              getIdToken: async () => 'mock-token',
-              getIdTokenResult: async () => ({}) as any,
-              reload: async () => {},
-              toJSON: () => ({}),
-            } as unknown as User;
-            setUser(guestUserObj);
-            setIsAuthReady(true);
-            
-            // Sync guest profile to DB
-            const userRef = doc(db, 'profiles', 'guest_user');
-            try {
-              const docSnap = await getDoc(userRef);
-              if (!docSnap.exists()) {
-                await setDoc(userRef, {
-                  uid: 'guest_user',
-                  nombre: 'Invitado Quantum',
-                  role: 'cliente',
-                  updatedAt: serverTimestamp(),
-                  createdAt: serverTimestamp()
-                });
-              }
-            } catch (err) {
-              handleFirestoreError(err, OperationType.GET, 'profiles/guest_user');
-            }
+            console.warn('Anonymous sign-in unavailable. Showing explicit login instead.', error);
           }
         }
+
+        setIsAuthReady(true);
+        return;
+      }
+
+      setUser(currentUser);
+
+      try {
+        const userRef = doc(db, 'profiles', currentUser.uid);
+        const profileSnap = await getDoc(userRef);
+
+        if (!profileSnap.exists() || !profileSnap.data().role) {
+          setUserRole(null);
+          setShowRoleSelection(true);
+          setActiveView('map');
+        } else {
+          const role = await getUserRole(currentUser.uid);
+          setUserRole(role);
+          setShowRoleSelection(false);
+
+          if (role === 'administrador') setActiveView('admin');
+          else if (role === 'proveedor') setActiveView('provider');
+          else setActiveView('map');
+        }
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, `profiles/${currentUser.uid}`);
+      } finally {
+        setIsAuthReady(true);
       }
     });
+
     return () => unsubscribe();
   }, []);
 
-
   const handleOrbClick = () => {
-    if (orbState === 'SPEAKING') {
-      stopTTS();
-    } else if (isLiveActive) {
-      stopLive();
-    } else {
-      startLive();
-    }
+    if (orbState === 'SPEAKING') stopTTS();
+    else if (isLiveActive) stopLive();
+    else startLive();
   };
 
-  // Firestore Real-time Listeners (Tasks/Providers/Communications)
   useEffect(() => {
     if (!user || !isAuthReady) return;
 
-    // Listen for Hugo's communications (Voice/Text)
     const commsRef = collection(db, 'comunicaciones');
-    const q = query(commsRef, where('uid', '==', user.uid), orderBy('timestamp', 'desc'), limit(1));
-    
-    const unsubscribeComms = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const comm = snapshot.docs[0].data();
-        // Avoid repeating the same message
-        if (comm.mensaje !== state.hugo_mensaje) {
-          processMessage(comm.mensaje, true); // true flag for external trigger
-        }
-      }
-    }, (err) => handleFirestoreError(err, OperationType.GET, 'comunicaciones'));
+    const commsQuery = query(commsRef, where('uid', '==', user.uid), orderBy('timestamp', 'desc'), limit(1));
 
-    return () => {
-      unsubscribeComms();
-    };
+    const unsubscribeComms = onSnapshot(
+      commsQuery,
+      (snapshot) => {
+        if (snapshot.empty) return;
+        const comm = snapshot.docs[0].data();
+        if (comm.mensaje && comm.mensaje !== state.hugo_mensaje) processMessage(comm.mensaje, true);
+      },
+      (error) => handleFirestoreError(error, OperationType.GET, 'comunicaciones')
+    );
+
+    return () => unsubscribeComms();
   }, [user, isAuthReady, state.hugo_mensaje, processMessage]);
 
-  const handleHire = (providerName: string) => {
-    processMessage(`Hugo, quiero contratar a ${providerName}.`);
+  const handleHire = (providerId: string) => {
+    processMessage(`Hugo, quiero contratar al proveedor ${providerId}.`);
   };
 
-  if (!isAuthReady) return <div className="h-screen w-screen bg-quantum-dark flex items-center justify-center text-white">Carregando...</div>;
-  if (!user) return (
-    <div className="h-screen w-screen bg-quantum-dark flex flex-col items-center justify-center text-white">
-      <h1 className="text-4xl font-bold mb-8 text-quantum-cyan">U.go Quantum OS</h1>
-      <button 
-        onClick={signInWithGoogle}
-        className="bg-quantum-cyan text-black px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform"
-      >
-        Entrar com Google
-      </button>
-    </div>
-  );
+  const handleNavigate = (view: string) => {
+    setActiveView(view as ViewId);
+    setIsChatOpen(false);
+  };
+
+  if (!isAuthReady) {
+    return <div className="flex h-screen w-screen items-center justify-center bg-quantum-dark text-white">Carregando UGO…</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-quantum-dark px-6 text-center text-white">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-quantum-cyan">U.G.O.</p>
+        <h1 className="text-4xl font-bold">Un pedido. Un profesional. Sin vueltas.</h1>
+        <p className="mt-4 max-w-md text-sm leading-relaxed text-white/55">
+          Iniciá sesión para continuar. El modo invitado depende de que Firebase Anonymous Auth esté habilitado.
+        </p>
+        <button
+          type="button"
+          onClick={signInWithGoogle}
+          className="mt-8 rounded-full bg-quantum-cyan px-8 py-4 text-base font-bold text-black transition-transform hover:scale-[1.02]"
+        >
+          Entrar con Google
+        </button>
+      </div>
+    );
+  }
 
   return (
     <ProvidersProvider isAuthReady={isAuthReady} user={user}>
       <HashRouter>
-        <div className="relative h-[100dvh] w-screen bg-quantum-dark overflow-hidden quantum-grid">
-          {/* DashboardNavigation is now managed within views or left here for persistent access if needed */}
-          <DashboardNavigation activeView={activeView} userId={user?.uid || ''} />
+        <div className="quantum-grid relative h-[100dvh] w-screen overflow-hidden bg-quantum-dark">
+          {!showRoleSelection && (
+            <DashboardNavigation activeView={activeView} userRole={userRole} onNavigate={handleNavigate} />
+          )}
 
           {showRoleSelection && (
-            <RoleSelection userId={user.uid} onRoleSelected={() => {
+            <RoleSelection
+              userId={user.uid}
+              displayName={user.displayName}
+              onRoleSelected={(role) => {
+                setUserRole(role);
                 setShowRoleSelection(false);
-                window.location.reload();
-            }} />
+                setActiveView(role === 'proveedor' ? 'provider' : 'map');
+              }}
+            />
           )}
 
-          {/* Persist the map component but just veil it if not in activeView */}
-          {user && (
-            <div className={cn("absolute inset-0 transition-opacity duration-300", activeView === 'map' ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none")}>
-              <ClientAppLayout 
-                user={user}
-                state={state}
-                orbState={orbState}
-                isLiveActive={isLiveActive}
-                liveTranscript={liveTranscript}
-                liveError={liveError}
-                handleOrbClick={handleOrbClick}
-                onRequestLocation={requestLocation}
-                isLocationLoading={isLocationLoading}
-                userLocation={userLocation}
-                onHire={handleHire}
-                onSelectProvider={selectProvider}
-              />
-            </div>
-          )}
+          <div
+            className={cn(
+              'absolute inset-0 transition-opacity duration-300',
+              activeView === 'map' ? 'z-10 opacity-100 pointer-events-auto' : 'z-0 opacity-0 pointer-events-none'
+            )}
+          >
+            <ClientAppLayout
+              user={user}
+              state={state}
+              orbState={orbState}
+              isLiveActive={isLiveActive}
+              liveTranscript={liveTranscript}
+              liveError={liveError}
+              handleOrbClick={handleOrbClick}
+              onRequestLocation={requestLocation}
+              isLocationLoading={isLocationLoading}
+              userLocation={userLocation}
+              onHire={handleHire}
+              onSelectProvider={selectProvider}
+              onChat={openChatWith}
+            />
+          </div>
 
-          {/* Dynamic Content Overlay (replaced Drawers/Modals) */}
           <AnimatePresence>
-            {activeView !== 'map' && user && (
-              <motion.div 
-                initial={{ opacity: 0, x: -100 }}
+            {activeView !== 'map' && (
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                className="absolute top-6 left-24 bottom-6 w-96 z-40"
+                exit={{ opacity: 0, x: 40 }}
+                className={cn(
+                  'absolute inset-0 z-40 overflow-y-auto bg-quantum-dark/95 p-4 pb-28 pt-5 backdrop-blur-xl md:bottom-6 md:left-24 md:top-6 md:bg-transparent md:p-0',
+                  activeView === 'admin' ? 'md:right-6' : 'md:right-auto md:w-[420px]'
+                )}
               >
                 {activeView === 'wallet' && <WalletView userId={user.uid} />}
                 {activeView === 'calendar' && <CalendarView userId={user.uid} />}
-                {activeView === 'history' && <ServiceHistory isOpen={true} userId={user.uid} onClose={() => setActiveView('map')} />}
-                {activeView === 'profile' && <UserProfile isOpen={true} userId={user.uid} onClose={() => setActiveView('map')} />}
+                {activeView === 'history' && <ServiceHistory isOpen userId={user.uid} onClose={() => setActiveView('map')} />}
+                {activeView === 'profile' && <UserProfile isOpen userId={user.uid} onClose={() => setActiveView('map')} />}
                 {activeView === 'provider' && <ProviderDashboard providerId={user.uid} />}
                 {activeView === 'admin' && <AdminPanel />}
               </motion.div>
             )}
           </AnimatePresence>
-          
-          {/* Chat Window */}
-          {isChatOpen && activeChatTarget && user && (
-            <ChatWindow
-              currentUserId={user.uid}
-              targetUserId={activeChatTarget}
-              onClose={() => setIsChatOpen(false)}
-            />
+
+          {isChatOpen && activeChatTarget && (
+            <ChatWindow currentUserId={user.uid} targetUserId={activeChatTarget} onClose={() => setIsChatOpen(false)} />
           )}
         </div>
       </HashRouter>
     </ProvidersProvider>
   );
 }
-
