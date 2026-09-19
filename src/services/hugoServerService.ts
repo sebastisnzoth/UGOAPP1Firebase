@@ -31,34 +31,29 @@ export interface HugoResponse {
 }
 
 export const HUGO_SYSTEM_PROMPT = `
-Eres Hugo, el Núcleo de Inteligencia del S.O. U.G.O. 
-TU REGLA #1: RESPUESTA SIEMPRE EN JSON ESTRUCTURADO. NUNCA respondas con texto plano fuera del JSON.
+Eres Hugo, el asistente de voz de U.G.O., una plataforma para conectar clientes con profesionales.
+Tu respuesta SIEMPRE debe ser JSON válido, sin texto fuera del JSON.
 
-Estructura obligatoria de respuesta:
+Estructura:
 {
-  "hugo_mensaje": "Texto persuasivo de 1 a 2 frases para voz/chat",
-  "accion": "BUSCAR_PROVEEDOR | RESERVAR_ESCROW | SOPORTE | CONVERSAR",
-  "ui_action": "IDLE | SHOW_PROVIDERS | NEGOTIATING | ACTIVE_SERVICE | CHECKOUT",
+  "hugo_mensaje": "respuesta breve y útil",
+  "accion": "BUSCAR_PROVEEDOR | SOPORTE | CONVERSAR",
+  "ui_action": "IDLE | SHOW_PROVIDERS | ACTIVE_SERVICE | CHECKOUT",
   "datos": {
-    "proveedores": [ { "id": "string", "nombre": "string", "rating": number, "tarifa": number } ] | null,
-    "mensaje_estado": "string"
+    "servicio": "categoría o servicio detectado, si corresponde",
+    "mensaje_estado": "estado breve"
   }
 }
 
-INSTRUCCIONES DE OPERACIÓN:
-1. SI EL USUARIO PIDE UN SERVICIO: 
-   - Ejecuta 'BUSCAR_PROVEEDOR'.
-   - Filtra proveedores activos de la base de datos local según la categoría.
-   - Si hallas proveedores: "ui_action" DEBE SER "SHOW_PROVIDERS". Llena "datos.proveedores".
-   - Si NO hallas proveedores: "ui_action" DEBE SER "IDLE". "datos.mensaje_estado" explica: "No hay técnicos disponibles en Canasvieiras en este momento".
-
-2. SI EL USUARIO PIDE DETALLES O SALUDA:
-   - "ui_action" debe ser "IDLE". "accion" debe ser "CONVERSAR".
-
-3. ESTRICTO CONTROL:
-   - Tu prioridad es el JSON. Si Gemini genera una introducción previa (ej: "Aquí tienes el JSON..."), descártala. SOLO JSON.
-   - Nunca alucines datos de proveedores: Usa solo los que te he proporcionado en el contexto.
-`;
+REGLAS:
+1. Nunca inventes profesionales, nombres, ratings, tarifas, ubicaciones ni disponibilidad.
+2. Los profesionales reales se leen exclusivamente desde Firebase/Firestore por la interfaz de UGO. Vos no tenés acceso directo a esa colección.
+3. Si el usuario pide un servicio, detectá el tipo de servicio, usa "accion": "BUSCAR_PROVEEDOR" y "ui_action": "SHOW_PROVIDERS". Decile que el radar mostrará los profesionales disponibles.
+4. Si no conocés un dato de disponibilidad, no afirmes que hay o no hay profesionales. La interfaz resolverá eso con datos en tiempo real.
+5. No inventes pagos, reservas, contratos ni confirmaciones. Esas acciones las ejecutan los botones y el ciclo real de bookings.
+6. Respondé de forma breve, clara y conversacional en el idioma del usuario.
+7. Para saludos, dudas o soporte usa "ui_action": "IDLE".
+`
 
 export const hugoServerService = {
   async chat(message: string, history: any[] = [], location?: [number, number]): Promise<HugoResponse> {
@@ -69,9 +64,6 @@ export const hugoServerService = {
         model: "gemini-3.5-flash",
         contents: [...history, { role: "user", parts: [{ text: message }] }],
         config: {
-          tools: [
-            { googleSearch: {} }
-          ],
           systemInstruction: HUGO_SYSTEM_PROMPT + `\nLocalización actual: ${location ? location.join(',') : 'Florianópolis'}.`,
           responseMimeType: "application/json",
           maxOutputTokens: 1000,
@@ -84,22 +76,6 @@ export const hugoServerService = {
               datos: {
                 type: Type.OBJECT,
                 properties: {
-                  proveedores: { 
-                    type: Type.ARRAY, 
-                    items: { 
-                      type: Type.OBJECT,
-                      properties: {
-                        id: { type: Type.STRING },
-                        nombre: { type: Type.STRING },
-                        rating: { type: Type.NUMBER },
-                        tarifa: { type: Type.NUMBER },
-                        foto: { type: Type.STRING },
-                        categoria: { type: Type.STRING },
-                        latitude: { type: Type.NUMBER },
-                        longitude: { type: Type.NUMBER }
-                      }
-                    } 
-                  },
                   mensaje_estado: { type: Type.STRING },
                   servicio: { type: Type.STRING },
                   monto: { type: Type.NUMBER },
