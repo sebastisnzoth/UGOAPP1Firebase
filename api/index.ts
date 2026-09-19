@@ -1,5 +1,4 @@
 import express from "express";
-import { helloFlow } from "../src/genkit-setup";
 import { hugoServerService } from "../src/services/hugoServerService";
 
 const app = express();
@@ -7,18 +6,7 @@ const app = express();
 // Config limit to handle media uploads (e.g. photos for analysis)
 app.use(express.json({ limit: '50mb' }));
 
-app.post("/api/hugo", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    const response = await helloFlow(prompt || "Hola");
-    res.json({ text: response });
-  } catch (error) {
-    console.error("Genkit error:", error);
-    res.status(500).json({ error: "Error interno en Hugo" });
-  }
-});
-
-// Proxied Hugo Chat Endpoint (orchestrates agent operations)
+// Hugo Chat Endpoint (orchestrates agent operations)
 app.post("/api/hugo/chat", async (req, res) => {
   try {
     const { message, history, location } = req.body;
