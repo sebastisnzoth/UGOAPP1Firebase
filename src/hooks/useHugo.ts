@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { hugoService, HugoResponse } from '../services/hugoService';
-import { db, auth } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface Provider {
   id: string;
@@ -163,34 +161,10 @@ export function useHugo() {
         { role: 'model', parts: [{ text: result.hugo_mensaje }] }
       ].slice(-10)); // Keep last 10 turns for memory
       
-      // Grounding fallback for providers if needed
       if (!result.datos) result.datos = {};
-      
-      if (result.accion === 'BUSCAR_PROVEEDOR' && (!result.datos.proveedores || result.datos.proveedores.length === 0)) {
-        result.datos.proveedores = [
-          { id: 'p1', nombre: 'Marco Rossi', rating: 4.9, tarifa: 85, foto: 'https://picsum.photos/seed/marco/100/100', categoria: 'Eletricista', latitude: userLocation[0] + 0.005, longitude: userLocation[1] + 0.005 },
-          { id: 'p2', nombre: 'Ana Silva', rating: 4.8, tarifa: 70, foto: 'https://picsum.photos/seed/ana/100/100', categoria: 'Limpeza', latitude: userLocation[0] - 0.005, longitude: userLocation[1] + 0.005 },
-          { id: 'p3', nombre: 'João Reparos', rating: 4.7, tarifa: 95, foto: 'https://picsum.photos/seed/joao/100/100', categoria: 'Encanador', latitude: userLocation[0] + 0.005, longitude: userLocation[1] - 0.005 }
-        ];
-      }
 
+      // Provider data must come from Firebase. Hugo never fabricates professionals.
       setState(result as HugoState);
-      
-      if (result.accion === 'CONFIRMAR_EMERGENCIA') {
-        try {
-          await addDoc(collection(db, 'bookings'), {
-            userId: auth.currentUser?.uid,
-            location: {
-              latitude: userLocation[0],
-              longitude: userLocation[1]
-            },
-            ...result.datos,
-            createdAt: serverTimestamp()
-          });
-        } catch (error) {
-          console.error("Erro ao salvar emergência na coleção bookings:", error);
-        }
-      }
 
       await playTTS(result.hugo_mensaje);
 
