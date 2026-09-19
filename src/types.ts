@@ -1,11 +1,58 @@
 export interface Notification {
   id: string;
   userId: string;
+  bookingId?: string;
+  actorId?: string;
   title: string;
   message: string;
   type: 'message' | 'service' | 'payment';
   read: boolean;
   timestamp: any;
+}
+
+export type ServiceStatus =
+  | 'solicitado'
+  | 'aceptado'
+  | 'en_camino'
+  | 'en_curso'
+  | 'pendiente_confirmacion_cliente'
+  | 'pendiente_pago'
+  | 'pago_informado'
+  | 'cerrado'
+  | 'cancelado';
+
+export type PaymentStatus = 'pendiente' | 'informado' | 'confirmado';
+export type PaymentMethod = 'efectivo' | 'mercado_pago';
+
+export interface Booking {
+  id: string;
+  clienteId: string;
+  clienteNombre?: string;
+  proveedorId: string;
+  proveedorNombre?: string;
+  servicio: string;
+  categoria?: string;
+  monto: number;
+  precioHora?: number;
+  estado_servicio: ServiceStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  scheduledFor?: any;
+  location?: {
+    latitude: number;
+    longitude: number;
+  } | null;
+  createdAt: any;
+  updatedAt?: any;
+  acceptedAt?: any;
+  enRouteAt?: any;
+  startedAt?: any;
+  providerFinishedAt?: any;
+  clientConfirmedAt?: any;
+  paidReportedAt?: any;
+  closedAt?: any;
+  cancelledAt?: any;
+  lastActorId?: string;
 }
 
 export interface Contract {
@@ -24,7 +71,7 @@ export interface Message {
   senderId: string;
   receiverId: string;
   content: string;
-  timestamp: any; // Using any for Firestore timestamp
+  timestamp: any;
 }
 
 export interface Review {
@@ -50,25 +97,35 @@ export type UserRole = 'cliente' | 'proveedor' | 'administrador';
 export interface UserProfile {
   uid: string;
   nombre: string;
-  email: string;
+  email?: string;
   foto?: string;
   bio?: string;
   role: UserRole;
   disponible?: boolean;
-  karma: number; // Gobernación basada en reputación
+  karma: number;
   bio_memoria?: {
     score_total: number;
     servicios_exitosos: number;
     preferencias?: string[];
-  };
+  } | string;
 }
 
 export interface HugoResponse {
   hugo_mensaje: string;
-  accion: 'NEGOCIAR_PROVEEDOR' | 'PROPONER_CIERRE' | 'CONFIRMAR_EMERGENCIA' |
-'MEMORIA_CONSULTA' | 'REGISTRAR_NUEVO_GOOGLE' | 'RECOCAR_SUPERADMIN';
-  ui_action: 'LOGIN_SCREEN' | 'CLIENT_DASHBOARD' | 'PROVIDER_DASHBOARD' | 'ADMIN_DASHBOARD' |
-'ACTIVE_SERVICE' | 'CHECKOUT';
+  accion:
+    | 'NEGOCIAR_PROVEEDOR'
+    | 'PROPONER_CIERRE'
+    | 'CONFIRMAR_EMERGENCIA'
+    | 'MEMORIA_CONSULTA'
+    | 'REGISTRAR_NUEVO_GOOGLE'
+    | 'RECOCAR_SUPERADMIN';
+  ui_action:
+    | 'LOGIN_SCREEN'
+    | 'CLIENT_DASHBOARD'
+    | 'PROVIDER_DASHBOARD'
+    | 'ADMIN_DASHBOARD'
+    | 'ACTIVE_SERVICE'
+    | 'CHECKOUT';
   ui_data: {
     rol_actual: UserRole | 'ninguno';
     karma_usuario: number;
