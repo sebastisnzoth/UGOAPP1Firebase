@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { getWallet, addFunds, subscribeToTransactions, createWallet } from '../services/walletService';
-import { Wallet, Transaction } from '../types';
-import { Wallet as WalletIcon, PlusCircle, History } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createWallet, getWallet, subscribeToTransactions } from '../services/walletService';
+import type { Transaction, Wallet } from '../types';
+import { History, LockKeyhole, Wallet as WalletIcon } from 'lucide-react';
 
 interface WalletViewProps {
   userId: string;
@@ -10,69 +10,88 @@ interface WalletViewProps {
 export default function WalletView({ userId }: WalletViewProps) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     const fetchData = async () => {
-      let w = await getWallet(userId);
-      if (!w) {
-        await createWallet(userId);
-        w = { userId, balance: 0 };
+      try {
+        let currentWallet = await getWallet(userId);
+        if (!currentWallet) {
+          await createWallet(userId);
+          currentWallet = { userId, balance: 0 };
+        }
+        if (active) setWallet(currentWallet);
+      } catch (error) {
+        console.error('Error loading wallet:', error);
+      } finally {
+        if (active) setLoading(false);
       }
-      setWallet(w);
     };
+
     fetchData();
 
-    const unsubscribe = subscribeToTransactions(userId, setTransactions, (error) => {
-      console.error('Error in subscribeToTransactions:', error);
-    });
-    return () => unsubscribe();
+    const unsubscribe = subscribeToTransactions(
+      userId,
+      setTransactions,
+      (error) => console.error('Error in subscribeToTransactions:', error)
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [userId]);
 
-  const handleAddFunds = async () => {
-    const val = parseFloat(amount);
-    if (isNaN(val) || val <= 0) return;
-    await addFunds(userId, val);
-    setAmount('');
-    setWallet(w => w ? {...w, balance: w.balance + val} : null);
-  };
-
   return (
-    <div className="bg-quantum-card p-6 rounded-2xl border border-white/10 space-y-6">
+    <div className="space-y-6 rounded-[2rem] border border-white/10 bg-quantum-card p-5 text-white shadow-2xl md:p-6">
       <div className="flex items-center gap-3">
         <WalletIcon className="text-quantum-cyan" />
-        <h2 className="text-xl font-bold text-white">Minha Carteira</h2>
-      </div>
-      
-      <div className="bg-quantum-dark p-4 rounded-xl border border-quantum-cyan/20">
-        <p className="text-sm text-white/50">Saldo Disponível</p>
-        <p className="text-3xl font-bold text-quantum-cyan">R$ {wallet?.balance.toFixed(2) || '0.00'}</p>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-quantum-cyan">Bóveda UGO</p>
+          <h2 className="text-xl font-bold">Saldo y movimientos</h2>
+        </div>
       </div>
 
-      <div className="flex gap-2">
-        <input 
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Valor"
-          className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-white"
-        />
-        <button onClick={handleAddFunds} className="bg-quantum-cyan text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2">
-          <PlusCircle size={18} /> Adicionar
-        </button>
+      <div className="rounded-2xl border border-quantum-cyan/20 bg-quantum-dark p-5">
+        <p className="text-sm text-white/45">Saldo disponible</p>
+        <p className="mt-1 text-3xl font-bold text-quantum-cyan">
+          {loading ? '…' : `R$ ${(wallet?.balance ?? 0).toFixed(2)}`}
+        </p>
+      </div>
+
+      <div className="flex gap-3 rounded-2xl border border-white/8 bg-white/5 p-4">
+        <LockKeyhole className="mt-0.5 shrink-0 text-white/55" size={19} />
+        <div>
+          <p className="text-sm font-semibold">Saldo protegido</p>
+          <p className="mt-1 text-xs leading-relaxed text-white/45">
+            El saldo no puede modificarse desde el navegador. Las cargas y liberaciones deben entrar por el flujo de pago seguro de UGO.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">
-        <h3 className="flex items-center gap-2 text-white font-bold"> <History size={16}/> Histórico</h3>
-        <div className="max-h-60 overflow-y-auto space-y-2">
-          {transactions.map(t => (
-            <div key={t.id} className="flex justify-between text-sm bg-white/5 p-2 rounded">
-              <span className="text-white">{t.description}</span>
-              <span className={t.amount > 0 ? "text-green-400" : "text-red-400"}>
-                {t.amount > 0 ? '+' : ''}{t.amount.toFixed(2)}
-              </span>
+        <h3 className="flex items-center gap-2 font-bold">
+          <History size={16} /> Histórico
+        </h3>
+
+        <div className="max-h-72 space-y-2 overflow-y-auto no-scrollbar">
+          {transactions.length > 0 ? (
+            transactions.map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/5 p-3 text-sm">
+                <span className="min-w-0 truncate text-white/80">{transaction.description}</span>
+                <span className={transaction.amount > 0 ? 'shrink-0 text-green-400' : 'shrink-0 text-red-400'}>
+                  {transaction.amount > 0 ? '+' : ''}
+                  {transaction.amount.toFixed(2)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-sm text-white/40">
+              Todavía no hay movimientos.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
