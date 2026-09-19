@@ -1,19 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import QuantumMap from './QuantumMap';
-import DashboardNavigation from './DashboardNavigation';
 import HugoOrb from './HugoOrb';
 import ConfirmationDialog from './ConfirmationDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { MapPin, Map, Layers, Plus } from 'lucide-react';
+import { Layers, MapPin, MessageCircle } from 'lucide-react';
 import { useProviders } from '../contexts/ProvidersContext';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 
 interface ClientAppLayoutProps {
   user: any;
   state: any;
-  orbState: "IDLE" | "LISTENING" | "THINKING" | "SPEAKING";
+  orbState: 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING';
   isLiveActive: boolean;
   liveTranscript: string | null;
   liveError?: string | null;
@@ -23,217 +20,195 @@ interface ClientAppLayoutProps {
   userLocation?: [number, number];
   onHire: (id: string) => void;
   onSelectProvider: (p: any) => void;
+  onChat: (providerId: string) => void;
 }
 
-export default function ClientAppLayout({ 
-  user, state, orbState, isLiveActive, liveTranscript, liveError, handleOrbClick, onRequestLocation, isLocationLoading, userLocation, onHire, onSelectProvider 
+export default function ClientAppLayout({
+  state,
+  orbState,
+  isLiveActive,
+  liveTranscript,
+  liveError,
+  handleOrbClick,
+  onRequestLocation,
+  isLocationLoading,
+  userLocation,
+  onHire,
+  onSelectProvider,
+  onChat,
 }: ClientAppLayoutProps) {
   const { providers } = useProviders();
   const [hireConfirm, setHireConfirm] = useState(false);
   const [mapTheme, setMapTheme] = useState<'dark' | 'satellite' | 'light'>('light');
-  const [isAddingMock, setIsAddingMock] = useState(false);
-  
+
   const filteredProviders = useMemo(() => {
-    return providers.filter(p => {
+    return providers.filter((p) => {
       const lat = Number(p.latitude ?? p.lat);
       const lng = Number(p.longitude ?? p.lng);
-      const isTestProvider = p.nombre?.toLowerCase().includes('test provider') || p.id?.startsWith('mock_') || p.uid?.startsWith('mock_') || p.id === 'test_provider';
-      return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0) && !isTestProvider;
+      const isTestProvider =
+        p.nombre?.toLowerCase().includes('test provider') ||
+        p.id?.startsWith('mock_') ||
+        p.uid?.startsWith('mock_') ||
+        p.id === 'test_provider';
+
+      return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0) && !isTestProvider;
     });
   }, [providers]);
 
-  const selectedProvider = filteredProviders.find(p => p.id === state.datos?.proveedor_seleccionado);
-
-  const initiateHire = () => {
-    setHireConfirm(true);
-  };
+  const selectedProvider = filteredProviders.find((p) => p.id === state.datos?.proveedor_seleccionado);
+  const providerAvailable = selectedProvider?.disponible !== false && selectedProvider?.status !== 'OFFLINE';
 
   const confirmHire = () => {
-    if (selectedProvider) {
-      onHire(selectedProvider.id);
-      setHireConfirm(false);
-    }
+    if (!selectedProvider || !providerAvailable) return;
+    onHire(selectedProvider.id);
+    setHireConfirm(false);
   };
 
   let mapCenter = { lat: -34.6037, lng: -58.3816 };
   if (userLocation && Array.isArray(userLocation) && userLocation.length === 2) {
     const uLat = Number(userLocation[0]);
     const uLng = Number(userLocation[1]);
-    if (!isNaN(uLat) && !isNaN(uLng)) {
-      mapCenter = { lat: uLat, lng: uLng };
-    }
+    if (!Number.isNaN(uLat) && !Number.isNaN(uLng)) mapCenter = { lat: uLat, lng: uLng };
   }
-  
+
   if (selectedProvider) {
     const pLat = Number(selectedProvider.latitude ?? selectedProvider.lat);
     const pLng = Number(selectedProvider.longitude ?? selectedProvider.lng);
-    if (!isNaN(pLat) && !isNaN(pLng) && pLat !== 0 && pLng !== 0) {
+    if (!Number.isNaN(pLat) && !Number.isNaN(pLng) && pLat !== 0 && pLng !== 0) {
       mapCenter = { lat: pLat, lng: pLng };
     }
   }
 
-  const handleAddMockProvider = async () => {
-    setIsAddingMock(true);
-    try {
-      const mockId = `mock_${Date.now()}`;
-      // slight offset for variation
-      const offsetLat = (Math.random() - 0.5) * 0.01;
-      const offsetLng = (Math.random() - 0.5) * 0.01;
-      
-      const providerData = {
-        nombre: `Test Provider ${Math.floor(Math.random() * 1000)}`,
-        role: 'proveedor',
-        categoria: ['Plomero', 'Electricista', 'Cerrajero'][Math.floor(Math.random() * 3)],
-        latitude: mapCenter.lat + offsetLat,
-        longitude: mapCenter.lng + offsetLng,
-        disponible: true,
-        precio: Math.floor(Math.random() * 50) + 20,
-        karma: 100,
-        bio_memoria: 'Proveedor de prueba generado.'
-      };
-      
-      await setDoc(doc(db, 'profiles', mockId), providerData);
-      await setDoc(doc(db, 'profiles_providers', mockId), providerData);
-    } catch (e) {
-      console.error("Error adding mock provider:", e);
-    } finally {
-      setIsAddingMock(false);
-    }
-  };
-
   return (
-    <div className="relative h-[100dvh] w-screen bg-black overflow-hidden">
-      <ConfirmationDialog 
+    <div className="relative h-[100dvh] w-screen overflow-hidden bg-black">
+      <ConfirmationDialog
         isOpen={hireConfirm}
-        providerName={selectedProvider?.nombre || 'Provedor'}
+        providerName={selectedProvider?.nombre || 'Proveedor'}
         cost={selectedProvider?.precio || 0}
         onConfirm={confirmHire}
         onCancel={() => setHireConfirm(false)}
       />
-      {/* Map Layer */}
+
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 z-10 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.7)_100%)]" />
-        <QuantumMap 
+        <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.65)_100%)]" />
+        <QuantumMap
           center={mapCenter}
           providers={filteredProviders}
           activeProviderId={state.datos?.proveedor_seleccionado}
           mapTheme={mapTheme}
-          onHire={(name) => initiateHire()}
+          onHire={() => providerAvailable && setHireConfirm(true)}
           onSelectProvider={onSelectProvider}
         />
       </div>
 
-      {/* Map Actions */}
-      <div className="absolute bottom-24 left-6 md:bottom-auto md:left-auto md:top-6 md:right-6 z-40 flex flex-row md:flex-col gap-1 p-1 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl">
-        <button 
-          onClick={handleAddMockProvider}
-          disabled={isAddingMock}
-          className={cn(
-            "p-3 rounded-full text-white transition-all duration-300 relative group",
-            isAddingMock ? "animate-pulse border border-quantum-cyan bg-quantum-cyan/10" : "hover:bg-white/10"
-          )}
-        >
-          <Plus size={20} className={isAddingMock ? "animate-spin text-quantum-cyan" : "text-white/70 group-hover:text-white"} strokeWidth={1.5} />
-        </button>
-        <div className="hidden md:block w-full h-px bg-white/10 my-1"/>
-        <div className="md:hidden h-full w-px bg-white/10 mx-1 self-stretch"/>
-        <button 
+      <div className="absolute bottom-28 left-4 z-40 flex flex-row gap-1 rounded-full border border-white/10 bg-black/55 p-1 shadow-2xl backdrop-blur-2xl md:bottom-auto md:left-auto md:right-6 md:top-6 md:flex-col">
+        <button
+          type="button"
+          aria-label="Cambiar estilo del mapa"
           onClick={() => setMapTheme(mapTheme === 'light' ? 'dark' : mapTheme === 'dark' ? 'satellite' : 'light')}
           className={cn(
-            "p-3 rounded-full text-white transition-all duration-300 group",
-            mapTheme === 'satellite' ? "bg-quantum-cyan/20 text-quantum-cyan" : mapTheme === 'light' ? "bg-white/20 text-white" : "hover:bg-white/10"
+            'rounded-full p-3 text-white transition-all duration-300',
+            mapTheme === 'satellite' ? 'bg-quantum-cyan/20 text-quantum-cyan' : mapTheme === 'light' ? 'bg-white/20' : 'hover:bg-white/10'
           )}
         >
-          <Layers size={20} className={mapTheme === 'satellite' ? "text-quantum-cyan" : mapTheme === 'light' ? "text-white" : "text-white/70 group-hover:text-white"} strokeWidth={1.5} />
+          <Layers size={20} strokeWidth={1.5} />
         </button>
-        <div className="hidden md:block w-full h-px bg-white/10 my-1"/>
-        <div className="md:hidden h-full w-px bg-white/10 mx-1 self-stretch"/>
-        <button 
+        <button
+          type="button"
+          aria-label="Usar mi ubicación"
           onClick={onRequestLocation}
           disabled={isLocationLoading}
           className={cn(
-            "p-3 rounded-full text-white transition-all duration-300 group",
-            isLocationLoading ? "animate-pulse border border-quantum-cyan bg-quantum-cyan/10" : "hover:bg-white/10"
+            'rounded-full p-3 text-white transition-all duration-300',
+            isLocationLoading ? 'animate-pulse border border-quantum-cyan bg-quantum-cyan/10' : 'hover:bg-white/10'
           )}
         >
-          <MapPin size={20} className={isLocationLoading ? "animate-spin text-quantum-cyan" : "text-white/70 group-hover:text-white"} strokeWidth={1.5} />
+          <MapPin size={20} className={isLocationLoading ? 'animate-spin text-quantum-cyan' : ''} strokeWidth={1.5} />
         </button>
       </div>
 
-      {/* Provider Card Overlay */}
       <AnimatePresence>
         {selectedProvider && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            initial={{ opacity: 0, y: 35, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="absolute top-6 left-6 right-6 md:left-28 md:right-auto w-auto md:w-[340px] z-40"
+            exit={{ opacity: 0, y: 35, scale: 0.97 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="absolute left-4 right-4 top-4 z-40 md:left-28 md:right-auto md:top-6 md:w-[360px]"
           >
-            <div className="overflow-hidden bg-black/70 backdrop-blur-3xl border border-white/10 rounded-[2rem] text-white shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-               <div className="p-6 md:p-8">
-                  <div className="flex items-start justify-between mb-2">
-                     <div>
-                        <h2 className="text-xl md:text-2xl font-bold tracking-tight">{selectedProvider.nombre}</h2>
-                        <p className="text-xs md:text-sm text-quantum-cyan uppercase tracking-widest font-semibold mt-1">{selectedProvider.categoria}</p>
-                     </div>
+            <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-black/75 text-white shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-3xl">
+              <div className="p-5 md:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-xl font-bold tracking-tight md:text-2xl">{selectedProvider.nombre}</h2>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-quantum-cyan">{selectedProvider.categoria || 'Profesional UGO'}</p>
                   </div>
-                  <p className="text-xs md:text-sm text-white/50 leading-relaxed mb-6 mt-4 line-clamp-3">{selectedProvider.bio_memoria}</p>
-                  <button 
-                      onClick={initiateHire}
-                      className="w-full relative overflow-hidden group py-3 bg-white text-black font-bold uppercase tracking-wider rounded-2xl text-[10px] md:text-xs transition-all hover:scale-[1.02]"
+                  <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider', providerAvailable ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/50')}>
+                    {providerAvailable ? 'Disponible' : 'No disponible'}
+                  </span>
+                </div>
+
+                {selectedProvider.bio_memoria && (
+                  <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-white/55 md:text-sm">{String(selectedProvider.bio_memoria)}</p>
+                )}
+
+                <div className="mt-5 grid grid-cols-[auto_1fr] gap-2">
+                  <button
+                    type="button"
+                    aria-label="Abrir chat"
+                    onClick={() => onChat(selectedProvider.id)}
+                    className="flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 text-white transition-colors hover:bg-white/10"
                   >
-                      <span className="relative z-10">Contratar • R$ {selectedProvider.precio}/h</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-quantum-cyan/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
+                    <MessageCircle size={18} />
                   </button>
-               </div>
+                  <button
+                    type="button"
+                    disabled={!providerAvailable}
+                    onClick={() => setHireConfirm(true)}
+                    className="min-h-11 rounded-2xl bg-white px-4 text-xs font-bold uppercase tracking-wider text-black transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/35"
+                  >
+                    {providerAvailable ? `Contratar • R$ ${selectedProvider.precio || 0}/h` : 'No disponible ahora'}
+                  </button>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Voice Interface - Center Bottom */}
-      <div className="absolute bottom-12 left-0 right-0 z-30 flex flex-col items-center pointer-events-none">
-        
-        {/* Hugo Message Bubble */}
+      <div className="pointer-events-none absolute bottom-28 left-0 right-0 z-30 flex flex-col items-center md:bottom-12">
         <AnimatePresence mode="wait">
-          <motion.div 
-            key={liveError ? 'error' : (isLiveActive ? 'live' : 'msg')}
-            initial={{ opacity: 0, y: 20 }}
+          <motion.div
+            key={liveError ? 'error' : isLiveActive ? 'live' : 'msg'}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="mb-8 px-6 py-4 bg-black/80 backdrop-blur-3xl border border-white/10 rounded-3xl max-w-md text-center shadow-2xl pointer-events-auto"
+            exit={{ opacity: 0, y: -16 }}
+            className="pointer-events-auto mb-5 max-w-[calc(100vw-2rem)] rounded-3xl border border-white/10 bg-black/80 px-5 py-3 text-center shadow-2xl backdrop-blur-3xl md:mb-8 md:max-w-md md:px-6 md:py-4"
           >
             {liveError ? (
-              <p className="text-[13px] font-mono text-red-400">
-                {liveError}
-              </p>
+              <p className="font-mono text-[12px] text-red-400">{liveError}</p>
             ) : (
-              <p className="text-sm font-medium text-white/90 leading-relaxed font-sans">
-                {isLiveActive ? liveTranscript : (state.hugo_mensaje || "Olá! Eu sou Hugo, seu Orbe inteligente. Como posso ajudar hoje?")}
+              <p className="text-sm font-medium leading-relaxed text-white/90">
+                {isLiveActive ? liveTranscript : state.hugo_mensaje || 'Olá! Eu sou Hugo. Como posso ajudar hoje?'}
               </p>
             )}
           </motion.div>
         </AnimatePresence>
 
         <div className="pointer-events-auto relative">
-          <HugoOrb 
-            state={isLiveActive ? 'LISTENING' : orbState} 
-            onClick={handleOrbClick}
-            className="w-24 h-24"
-          />
+          <HugoOrb state={isLiveActive ? 'LISTENING' : orbState} onClick={handleOrbClick} className="h-20 w-20 md:h-24 md:w-24" />
         </div>
-        
-        {/* Voice Trigger (based on image) */}
+
         {!isLiveActive && (
-          <motion.div 
+          <motion.button
+            type="button"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-6 px-5 py-2 bg-black/60 backdrop-blur-xl border border-quantum-cyan/30 rounded-full flex items-center gap-2 pointer-events-auto cursor-pointer hover:bg-quantum-cyan/20 transition-colors"
+            className="pointer-events-auto mt-4 rounded-full border border-quantum-cyan/30 bg-black/60 px-5 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-quantum-cyan backdrop-blur-xl transition-colors hover:bg-quantum-cyan/20 md:mt-6"
             onClick={handleOrbClick}
           >
-              <span className="text-[10px] text-quantum-cyan font-bold uppercase tracking-[0.2em]">Toca para hablar</span>
-          </motion.div>
+            Toca para hablar
+          </motion.button>
         )}
       </div>
     </div>
