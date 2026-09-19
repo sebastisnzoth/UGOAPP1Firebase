@@ -56,7 +56,18 @@ export default function ClientAppLayout({
         p.uid?.startsWith('mock_') ||
         p.id === 'test_provider';
 
-      return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0) && !isTestProvider;
+      const isAvailable =
+        p.disponible === true ||
+        p.estado_online === true ||
+        (p.status != null && p.status !== 'OFFLINE');
+
+      return (
+        !Number.isNaN(lat) &&
+        !Number.isNaN(lng) &&
+        (lat !== 0 || lng !== 0) &&
+        !isTestProvider &&
+        isAvailable
+      );
     });
   }, [providers]);
 
