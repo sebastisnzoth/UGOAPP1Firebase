@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
-import { helloFlow } from "./src/genkit-setup";
 import http from "http";
 import { WebSocketServer } from "ws";
 import { Modality } from "@google/genai";
@@ -115,18 +114,7 @@ IMPORTANTE SOBRE TU AUTONOMÍA: TIENES CONTROL TOTAL sobre la interfaz gráfica 
   // API routes
   app.use(express.json({ limit: '50mb' }));
   
-  app.post("/api/hugo", async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      const response = await helloFlow(prompt || "Hola");
-      res.json({ text: response });
-    } catch (error) {
-      console.error("Genkit error:", error);
-      res.status(500).json({ error: "Error interno en Hugo" });
-    }
-  });
-
-  // Proxied Hugo endpoints
+  // Hugo endpoints
   app.post("/api/hugo/chat", async (req, res) => {
     try {
       const { message, history, location } = req.body;
