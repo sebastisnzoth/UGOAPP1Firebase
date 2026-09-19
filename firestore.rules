@@ -37,7 +37,27 @@ service cloud.firestore {
         && request.resource.data.proveedorId == resource.data.proveedorId
         && request.resource.data.monto == resource.data.monto
         && request.resource.data.servicio == resource.data.servicio
-        && request.resource.data.paymentMethod == resource.data.paymentMethod;
+        && request.resource.data.paymentMethod == resource.data.paymentMethod
+        && request.resource.data.get('scheduledFor', null) == resource.data.get('scheduledFor', null)
+        && request.resource.data.get('categoria', '') == resource.data.get('categoria', '')
+        && request.resource.data.get('precioHora', 0) == resource.data.get('precioHora', 0);
+    }
+
+    function validBookingPaymentTransition() {
+      let from = resource.data.get('estado_servicio', '');
+      let to = request.resource.data.get('estado_servicio', '');
+      let oldPayment = resource.data.get('paymentStatus', 'pendiente');
+      let newPayment = request.resource.data.get('paymentStatus', 'pendiente');
+
+      return (
+        (from == 'pendiente_pago' && to == 'pago_informado' && newPayment == 'informado')
+        || (from == 'pago_informado' && to == 'cerrado' && newPayment == 'confirmado')
+        || (
+          !(from == 'pendiente_pago' && to == 'pago_informado')
+          && !(from == 'pago_informado' && to == 'cerrado')
+          && newPayment == oldPayment
+        )
+      );
     }
 
     function validBookingTransition() {
@@ -46,7 +66,10 @@ service cloud.firestore {
       let isClient = request.auth.uid == resource.data.clienteId;
       let isProvider = request.auth.uid == resource.data.proveedorId;
 
-      return bookingCoreIsImmutable() && (
+      return bookingCoreIsImmutable()
+        && validBookingPaymentTransition()
+        && request.resource.data.get('lastActorId', '') == request.auth.uid
+        && (
         (
           isProvider && (
             (from == 'solicitado' && to == 'aceptado')
