@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import QuantumMap from './QuantumMap';
 import HugoOrb from './HugoOrb';
 import ConfirmationDialog from './ConfirmationDialog';
+import ClientActiveService from './ClientActiveService';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Layers, MapPin, MessageCircle } from 'lucide-react';
 import { useProviders } from '../contexts/ProvidersContext';
+import { createBooking } from '../services/bookingService';
 
 interface ClientAppLayoutProps {
   user: any;
@@ -19,11 +21,12 @@ interface ClientAppLayoutProps {
   isLocationLoading: boolean;
   userLocation?: [number, number];
   onHire: (id: string) => void;
-  onSelectProvider: (p: any) => void;
+  onSelectProvider: (id: string) => void;
   onChat: (providerId: string) => void;
 }
 
 export default function ClientAppLayout({
+  user,
   state,
   orbState,
   isLiveActive,
@@ -39,6 +42,8 @@ export default function ClientAppLayout({
 }: ClientAppLayoutProps) {
   const { providers } = useProviders();
   const [hireConfirm, setHireConfirm] = useState(false);
+  const [isHiring, setIsHiring] = useState(false);
+  const [hireError, setHireError] = useState<string | null>(null);
   const [mapTheme, setMapTheme] = useState<'dark' | 'satellite' | 'light'>('light');
 
   const filteredProviders = useMemo(() => {
@@ -57,11 +62,40 @@ export default function ClientAppLayout({
 
   const selectedProvider = filteredProviders.find((p) => p.id === state.datos?.proveedor_seleccionado);
   const providerAvailable = selectedProvider?.disponible !== false && selectedProvider?.status !== 'OFFLINE';
+  const selectedPrice = Number(
+    selectedProvider?.precio ?? selectedProvider?.tarifa_personalizada ?? selectedProvider?.tarifa ?? 0
+  );
 
-  const confirmHire = () => {
-    if (!selectedProvider || !providerAvailable) return;
-    onHire(selectedProvider.id);
-    setHireConfirm(false);
+  const confirmHire = async () => {
+    if (!selectedProvider || !providerAvailable || isHiring) return;
+
+    setIsHiring(true);
+    setHireError(null);
+
+    try {
+      await createBooking({
+        clienteId: user.uid,
+        clienteNombre: user.displayName || user.email || 'Cliente UGO',
+        proveedorId: selectedProvider.id,
+        proveedorNombre: selectedProvider.nombre || selectedProvider.primeiro_nome || 'Profesional UGO',
+        servicio: state.datos?.servicio || selectedProvider.categoria || selectedProvider.especialidade || 'Servicio UGO',
+        categoria: selectedProvider.categoria || selectedProvider.especialidade,
+        monto: selectedPrice,
+        precioHora: selectedPrice,
+        location: userLocation
+          ? { latitude: Number(userLocation[0]), longitude: Number(userLocation[1]) }
+          : null,
+      });
+
+      setHireConfirm(false);
+      onSelectProvider('');
+      onHire(selectedProvider.id);
+    } catch (error) {
+      console.error('Error creando el pedido:', error);
+      setHireError('No pudimos crear el pedido. Revisá la conexión y volvé a intentar.');
+    } finally {
+      setIsHiring(false);
+    }
   };
 
   let mapCenter = { lat: -34.6037, lng: -58.3816 };
@@ -81,12 +115,16 @@ export default function ClientAppLayout({
 
   return (
     <div className="relative h-[100dvh] w-screen overflow-hidden bg-black">
+      <ClientActiveService userId={user.uid} />
+
       <ConfirmationDialog
         isOpen={hireConfirm}
         providerName={selectedProvider?.nombre || 'Proveedor'}
-        cost={selectedProvider?.precio || 0}
+        cost={selectedPrice}
         onConfirm={confirmHire}
-        onCancel={() => setHireConfirm(false)}
+        onCancel={() => {
+          if (!isHiring) setHireConfirm(false);
+        }}
       />
 
       <div className="absolute inset-0 z-0">
@@ -108,7 +146,11 @@ export default function ClientAppLayout({
           onClick={() => setMapTheme(mapTheme === 'light' ? 'dark' : mapTheme === 'dark' ? 'satellite' : 'light')}
           className={cn(
             'rounded-full p-3 text-white transition-all duration-300',
-            mapTheme === 'satellite' ? 'bg-quantum-cyan/20 text-quantum-cyan' : mapTheme === 'light' ? 'bg-white/20' : 'hover:bg-white/10'
+            mapTheme === 'satellite'
+              ? 'bg-quantum-cyan/20 text-quantum-cyan'
+              : mapTheme === 'light'
+                ? 'bg-white/20'
+                : 'hover:bg-white/10'
           )}
         >
           <Layers size={20} strokeWidth={1.5} />
@@ -123,7 +165,11 @@ export default function ClientAppLayout({
             isLocationLoading ? 'animate-pulse border border-quantum-cyan bg-quantum-cyan/10' : 'hover:bg-white/10'
           )}
         >
-          <MapPin size={20} className={isLocationLoading ? 'animate-spin text-quantum-cyan' : ''} strokeWidth={1.5} />
+          <MapPin
+            size={20}
+            className={isLocationLoading ? 'animate-spin text-quantum-cyan' : ''}
+            strokeWidth={1.5}
+          />
         </button>
       </div>
 
@@ -140,16 +186,33 @@ export default function ClientAppLayout({
               <div className="p-5 md:p-7">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h2 className="truncate text-xl font-bold tracking-tight md:text-2xl">{selectedProvider.nombre}</h2>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-quantum-cyan">{selectedProvider.categoria || 'Profesional UGO'}</p>
+                    <h2 className="truncate text-xl font-bold tracking-tight md:text-2xl">
+                      {selectedProvider.nombre}
+                    </h2>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-quantum-cyan">
+                      {selectedProvider.categoria || 'Profesional UGO'}
+                    </p>
                   </div>
-                  <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider', providerAvailable ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/50')}>
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
+                      providerAvailable
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-white/10 text-white/50'
+                    )}
+                  >
                     {providerAvailable ? 'Disponible' : 'No disponible'}
                   </span>
                 </div>
 
                 {selectedProvider.bio_memoria && (
-                  <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-white/55 md:text-sm">{String(selectedProvider.bio_memoria)}</p>
+                  <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-white/55 md:text-sm">
+                    {String(selectedProvider.bio_memoria)}
+                  </p>
+                )}
+
+                {hireError && (
+                  <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-xs text-red-200">{hireError}</p>
                 )}
 
                 <div className="mt-5 grid grid-cols-[auto_1fr] gap-2">
@@ -163,11 +226,15 @@ export default function ClientAppLayout({
                   </button>
                   <button
                     type="button"
-                    disabled={!providerAvailable}
+                    disabled={!providerAvailable || isHiring}
                     onClick={() => setHireConfirm(true)}
                     className="min-h-11 rounded-2xl bg-white px-4 text-xs font-bold uppercase tracking-wider text-black transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/35"
                   >
-                    {providerAvailable ? `Contratar • R$ ${selectedProvider.precio || 0}/h` : 'No disponible ahora'}
+                    {isHiring
+                      ? 'Creando pedido…'
+                      : providerAvailable
+                        ? `Contratar • R$ ${selectedPrice.toFixed(2)}`
+                        : 'No disponible ahora'}
                   </button>
                 </div>
               </div>
@@ -189,14 +256,20 @@ export default function ClientAppLayout({
               <p className="font-mono text-[12px] text-red-400">{liveError}</p>
             ) : (
               <p className="text-sm font-medium leading-relaxed text-white/90">
-                {isLiveActive ? liveTranscript : state.hugo_mensaje || 'Olá! Eu sou Hugo. Como posso ajudar hoje?'}
+                {isLiveActive
+                  ? liveTranscript
+                  : state.hugo_mensaje || 'Olá! Eu sou Hugo. Como posso ajudar hoje?'}
               </p>
             )}
           </motion.div>
         </AnimatePresence>
 
         <div className="pointer-events-auto relative">
-          <HugoOrb state={isLiveActive ? 'LISTENING' : orbState} onClick={handleOrbClick} className="h-20 w-20 md:h-24 md:w-24" />
+          <HugoOrb
+            state={isLiveActive ? 'LISTENING' : orbState}
+            onClick={handleOrbClick}
+            className="h-20 w-20 md:h-24 md:w-24"
+          />
         </div>
 
         {!isLiveActive && (
