@@ -131,8 +131,11 @@ export default function App() {
     return () => unsubscribeComms();
   }, [user, isAuthReady, state.hugo_mensaje, processMessage]);
 
-  const handleHire = (providerId: string) => {
-    processMessage(`Hugo, quiero contratar al proveedor ${providerId}.`);
+  const handleHire = () => {
+    processMessage(
+      'Pedido creado. El profesional ya puede aceptarlo y vas a ver el seguimiento en tiempo real.',
+      true
+    );
   };
 
   const handleNavigate = (view: string) => {
