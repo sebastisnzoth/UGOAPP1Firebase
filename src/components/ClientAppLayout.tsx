@@ -77,7 +77,7 @@ export default function ClientAppLayout({
     selectedProvider?.precio ?? selectedProvider?.tarifa_personalizada ?? selectedProvider?.tarifa ?? 0
   );
 
-  const confirmHire = async () => {
+  const confirmHire = async (scheduledFor: Date | null) => {
     if (!selectedProvider || !providerAvailable || isHiring) return;
 
     setIsHiring(true);
@@ -93,6 +93,7 @@ export default function ClientAppLayout({
         categoria: selectedProvider.categoria || selectedProvider.especialidade,
         monto: selectedPrice,
         precioHora: selectedPrice,
+        scheduledFor,
         location: userLocation
           ? { latitude: Number(userLocation[0]), longitude: Number(userLocation[1]) }
           : null,
