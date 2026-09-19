@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Zap, Wrench, Briefcase, UserCircle, Filter, MapPin } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Fix leaflet marker icon
@@ -120,6 +120,7 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
   const [selectedCategory, setSelectedCategory] = useState<string | 'Todos'>('Todos');
   const [minRating, setMinRating] = useState(0);
   const [maxDistance, setMaxDistance] = useState(50); // KM
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [lastCenter, setLastCenter] = useState(center);
   const [focusPulse, setFocusPulse] = useState(false);
@@ -166,6 +167,13 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
       }
     }
   }, [activeProviderId, providers]);
+
+  const categories = useMemo(() => {
+    const values = providers
+      .map((provider) => String(provider.categoria || provider.especialidade || '').trim())
+      .filter(Boolean);
+    return ['Todos', ...Array.from(new Set(values)).sort()];
+  }, [providers]);
 
   const safeCenter = useMemo(() => {
     const lat = Number(center?.lat);
@@ -283,25 +291,112 @@ export default function QuantumMap({ center, providers, activeProviderId, mapThe
           )}
         </AnimatePresence>
 
-        <div className={`absolute left-1/2 -translate-x-1/2 z-[400] flex gap-4 pointer-events-none transition-all duration-500 ${activeProviderId ? 'top-64 md:top-6' : 'top-6'}`}>
-          <div className="bg-black/60 backdrop-blur-3xl p-4 rounded-3xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] w-72 pointer-events-auto flex flex-col gap-4">
-             <div>
-                <div className="flex justify-between items-center mb-2">
-                   <span className="text-[10px] text-quantum-cyan font-bold uppercase tracking-[0.2em]">Rating Mínimo</span>
-                   <span className="text-sm font-mono text-white">{minRating.toFixed(1)}</span>
-                </div>
-                <input type="range" min="0" max="5" step="0.5" value={minRating} onChange={(e) => setMinRating(Number(e.target.value))} className="w-full accent-quantum-cyan cursor-pointer h-1.5 bg-white/20 rounded-lg appearance-none" />
-             </div>
-             <div className="w-full h-px bg-white/10" />
-             <div>
-                <div className="flex justify-between items-center mb-2">
-                   <span className="text-[10px] text-quantum-cyan font-bold uppercase tracking-[0.2em]">Raio Máximo</span>
-                   <span className="text-sm font-mono text-white">{maxDistance} km</span>
-                </div>
-                <input type="range" min="1" max="100" step="1" value={maxDistance} onChange={(e) => setMaxDistance(Number(e.target.value))} className="w-full accent-quantum-cyan cursor-pointer h-1.5 bg-white/20 rounded-lg appearance-none" />
-             </div>
-          </div>
+        <div className="absolute bottom-28 right-4 z-[420] md:bottom-auto md:right-20 md:top-6">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-black/70 px-4 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-2xl transition-colors hover:bg-black/85"
+            aria-expanded={filtersOpen}
+            aria-label="Filtros del radar"
+          >
+            <Filter size={16} className="text-quantum-cyan" />
+            <span className="hidden sm:inline">Filtros</span>
+            {(selectedCategory !== 'Todos' || minRating > 0 || maxDistance < 50) && (
+              <span className="h-2 w-2 rounded-full bg-quantum-cyan" />
+            )}
+          </button>
         </div>
+
+        <AnimatePresence>
+          {filtersOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              className="absolute bottom-28 left-4 right-4 z-[430] max-h-[52vh] overflow-y-auto rounded-[1.5rem] border border-white/10 bg-black/90 p-4 text-white shadow-2xl backdrop-blur-3xl no-scrollbar md:bottom-auto md:left-auto md:right-20 md:top-20 md:w-80"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-quantum-cyan">Radar UGO</p>
+                  <h3 className="mt-1 font-bold">Filtrar profesionales</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(false)}
+                  className="rounded-full p-2 text-white/50 hover:bg-white/10 hover:text-white"
+                  aria-label="Cerrar filtros"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Categoría</p>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((category) => (
+                    <button
+                      type="button"
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`rounded-full border px-3 py-2 text-xs transition-colors ${
+                        selectedCategory === category
+                          ? 'border-quantum-cyan bg-quantum-cyan/15 text-quantum-cyan'
+                          : 'border-white/10 bg-white/5 text-white/60'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Rating mínimo</span>
+                  <span className="text-xs font-mono text-white/80">{minRating.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="0.5"
+                  value={minRating}
+                  onChange={(event) => setMinRating(Number(event.target.value))}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-white/20 accent-quantum-cyan"
+                />
+              </div>
+
+              <div className="mt-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Distancia máxima</span>
+                  <span className="text-xs font-mono text-white/80">{maxDistance} km</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={maxDistance}
+                  onChange={(event) => setMaxDistance(Number(event.target.value))}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-white/20 accent-quantum-cyan"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('Todos');
+                  setMinRating(0);
+                  setMaxDistance(50);
+                }}
+                className="mt-5 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-white/65 hover:bg-white/10 hover:text-white"
+              >
+                Limpiar filtros
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <MapContainer center={[safeCenter.lat, safeCenter.lng]} zoom={14} style={{ width: '100%', height: '100%', WebkitFilter: mapTheme === 'dark' ? 'hue-rotate(190deg) brightness(0.65) saturate(1.2) contrast(1.15)' : 'none' }}>
           <MapUpdater center={safeCenter} />
           <TileLayer url={tileUrl} attribution={attribution} />
