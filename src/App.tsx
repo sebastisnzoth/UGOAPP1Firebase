@@ -11,6 +11,7 @@ import WalletView from './components/WalletView';
 import CalendarView from './components/CalendarView';
 import ChatWindow from './components/ChatWindow';
 import DashboardNavigation from './components/DashboardNavigation';
+import NotificationBell from './components/NotificationBell';
 import ProviderDashboard from './components/ProviderDashboard';
 import AdminPanel from './components/AdminPanel';
 import RoleSelection from './components/RoleSelection';
@@ -209,6 +210,12 @@ export default function App() {
             />
           </div>
 
+          {activeView !== 'map' && (
+            <div className="absolute right-4 top-4 z-[80] md:right-6 md:top-6">
+              <NotificationBell userId={user.uid} />
+            </div>
+          )}
+
           <AnimatePresence>
             {activeView !== 'map' && (
               <motion.div
@@ -222,7 +229,7 @@ export default function App() {
               >
                 {activeView === 'wallet' && <WalletView userId={user.uid} />}
                 {activeView === 'calendar' && <CalendarView userId={user.uid} />}
-                {activeView === 'history' && <ServiceHistory isOpen userId={user.uid} onClose={() => setActiveView('map')} />}
+                {activeView === 'history' && <ServiceHistory isOpen userId={user.uid} role={userRole} onClose={() => setActiveView('map')} />}
                 {activeView === 'profile' && <UserProfile isOpen userId={user.uid} onClose={() => setActiveView('map')} />}
                 {activeView === 'provider' && <ProviderDashboard providerId={user.uid} />}
                 {activeView === 'admin' && <AdminPanel />}
