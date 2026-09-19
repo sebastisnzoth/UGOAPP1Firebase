@@ -98,8 +98,6 @@ export default function UserProfile({ isOpen, onClose, userId }: UserProfileProp
             precio: Number(profile.tarifa || 0),
             bio_memoria: profile.bio?.trim() || '',
             foto: profile.foto || '',
-            rating: Number(profile.rating || 5),
-            karma: Number(profile.karma || 100),
             disponible: Boolean(profile.disponible),
             forma_pago: profile.forma_pago || 'efectivo',
           },
