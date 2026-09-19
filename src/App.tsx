@@ -51,10 +51,10 @@ export default function App() {
   const { isActive: isLiveActive, startLive, stopLive, transcript: liveTranscript, liveError } = useLiveHugo();
 
   useEffect(() => {
-    if (state.ui_action === 'SHOW_PROVIDERS' && state.datos?.proveedores?.length > 0) {
+    if (state.ui_action === 'SHOW_PROVIDERS') {
       setActiveView('map');
     }
-  }, [state.ui_action, state.datos?.proveedores]);
+  }, [state.ui_action]);
 
   useEffect(() => {
     let triedAnonymousLogin = false;
