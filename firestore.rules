@@ -10,7 +10,7 @@ service cloud.firestore {
     }
 
     function esSoberano() {
-      return signedIn() && request.auth.token.email == 'sebastianzoth@gmail.com';
+      return signedIn() && request.auth.token.get('email', '') == 'sebastianzoth@gmail.com';
     }
 
     function cuentaActiva() {
@@ -20,7 +20,7 @@ service cloud.firestore {
 
     function esProveedor(userId) {
       let userPath = /databases/$(database)/documents/profiles/$(userId);
-      return exists(userPath) && get(userPath).data.role == 'proveedor';
+      return exists(userPath) && get(userPath).data.get('role', '') == 'proveedor';
     }
 
     function isParticipant(data) {
@@ -44,8 +44,8 @@ service cloud.firestore {
         && cuentaActiva()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['karma', 'email'])
         && (
-          request.resource.data.role == resource.data.role
-          || (!('role' in resource.data) && request.resource.data.role in ['cliente', 'proveedor'])
+          request.resource.data.role == resource.data.get('role', '')
+          || (resource.data.get('role', '') == '' && request.resource.data.role in ['cliente', 'proveedor'])
         )
       );
 
