@@ -106,7 +106,10 @@ service cloud.firestore {
     }
 
     match /wallets/{userId} {
-      allow read, create: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+                    && request.resource.data.userId == userId
+                    && request.resource.data.balance == 0;
       allow update, delete: if esSoberano();
     }
 
