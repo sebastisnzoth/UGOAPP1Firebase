@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import type { Booking, ServiceStatus, UserProfile } from '../types';
 import {
   CLOSED_SERVICE_STATUSES,
+  bookingTimeValue,
   sendBookingNotification,
   sortBookingsNewestFirst,
   subscribeToProviderBookings,
@@ -206,6 +207,14 @@ export default function ProviderDashboard({ providerId }: { providerId: string }
                       <p className="mt-1 truncate text-xs text-white/45">
                         {booking.clienteNombre || 'Cliente UGO'} · R$ {(booking.monto || 0).toFixed(2)}
                       </p>
+                      {booking.scheduledFor && (
+                        <p className="mt-1 text-[11px] font-medium text-amber-200/80">
+                          Agendado: {new Intl.DateTimeFormat('es', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          }).format(new Date(bookingTimeValue(booking.scheduledFor)))}
+                        </p>
+                      )}
                     </div>
                     <span className="shrink-0 rounded-full bg-quantum-cyan/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-quantum-cyan">
                       {statusLabels[booking.estado_servicio]}
