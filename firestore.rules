@@ -32,6 +32,53 @@ service cloud.firestore {
       );
     }
 
+    function bookingCoreIsImmutable() {
+      return request.resource.data.clienteId == resource.data.clienteId
+        && request.resource.data.proveedorId == resource.data.proveedorId
+        && request.resource.data.monto == resource.data.monto
+        && request.resource.data.servicio == resource.data.servicio
+        && request.resource.data.paymentMethod == resource.data.paymentMethod;
+    }
+
+    function validBookingTransition() {
+      let from = resource.data.get('estado_servicio', '');
+      let to = request.resource.data.get('estado_servicio', '');
+      let isClient = request.auth.uid == resource.data.clienteId;
+      let isProvider = request.auth.uid == resource.data.proveedorId;
+
+      return bookingCoreIsImmutable() && (
+        (
+          isProvider && (
+            (from == 'solicitado' && to == 'aceptado')
+            || (from == 'aceptado' && to in ['en_camino', 'en_curso'])
+            || (from == 'en_camino' && to == 'en_curso')
+            || (from == 'en_curso' && to == 'pendiente_confirmacion_cliente')
+            || (from == 'pago_informado' && to == 'cerrado')
+          )
+        )
+        || (
+          isClient && (
+            (from in ['solicitado', 'aceptado', 'en_camino'] && to == 'cancelado')
+            || (from == 'pendiente_confirmacion_cliente' && to == 'pendiente_pago')
+            || (from == 'pendiente_pago' && to == 'pago_informado')
+          )
+        )
+      );
+    }
+
+    function canCreateBookingNotification() {
+      let bookingPath = /databases/$(database)/documents/bookings/$(request.resource.data.bookingId);
+      return signedIn()
+        && request.resource.data.actorId == request.auth.uid
+        && exists(bookingPath)
+        && isParticipant(get(bookingPath).data)
+        && request.resource.data.userId != request.auth.uid
+        && (
+          request.resource.data.userId == get(bookingPath).data.clienteId
+          || request.resource.data.userId == get(bookingPath).data.proveedorId
+        );
+    }
+
     match /profiles/{userId} {
       allow read: if true;
 
@@ -58,8 +105,25 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      allow create: if esSoberano() || (cuentaActiva() && isParticipant(request.resource.data));
-      allow read, update: if esSoberano() || (cuentaActiva() && isParticipant(resource.data));
+      allow create: if esSoberano() || (
+        cuentaActiva()
+        && request.resource.data.clienteId == request.auth.uid
+        && esProveedor(request.resource.data.proveedorId)
+        && request.resource.data.estado_servicio == 'solicitado'
+        && request.resource.data.paymentMethod in ['efectivo', 'mercado_pago']
+        && request.resource.data.paymentStatus == 'pendiente'
+        && request.resource.data.monto >= 0
+      );
+
+      allow read: if esSoberano() || (cuentaActiva() && isParticipant(resource.data));
+
+      allow update: if esSoberano() || (
+        cuentaActiva()
+        && isParticipant(resource.data)
+        && isParticipant(request.resource.data)
+        && validBookingTransition()
+      );
+
       allow delete: if esSoberano();
     }
 
@@ -95,13 +159,19 @@ service cloud.firestore {
 
     match /agendamentos/{appointmentId} {
       allow create: if signedIn() && request.resource.data.clientId == request.auth.uid;
-      allow read, update: if esSoberano() || (signedIn() && (resource.data.clientId == request.auth.uid || resource.data.providerId == request.auth.uid));
+      allow read, update: if esSoberano() || (
+        signedIn()
+        && (resource.data.clientId == request.auth.uid || resource.data.providerId == request.auth.uid)
+      );
       allow delete: if esSoberano();
     }
 
     match /notifications/{notificationId} {
-      allow create: if esSoberano();
-      allow read, update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if esSoberano() || canCreateBookingNotification();
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow update: if signedIn()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if esSoberano();
     }
 
