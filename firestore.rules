@@ -169,10 +169,9 @@ service cloud.firestore {
       allow delete: if esSoberano();
     }
 
+    // Colección heredada: el ciclo real vive exclusivamente en /bookings.
     match /contratos/{contratoId} {
-      allow create: if esSoberano() || (cuentaActiva() && isParticipant(request.resource.data));
-      allow read, update: if esSoberano() || (cuentaActiva() && isParticipant(resource.data));
-      allow delete: if esSoberano();
+      allow read, create, update, delete: if esSoberano();
     }
 
     match /comunicaciones/{messageId} {
@@ -199,13 +198,9 @@ service cloud.firestore {
       allow update, delete: if esSoberano();
     }
 
+    // Colección heredada: la agenda real usa scheduledFor dentro de /bookings.
     match /agendamentos/{appointmentId} {
-      allow create: if signedIn() && request.resource.data.clientId == request.auth.uid;
-      allow read, update: if esSoberano() || (
-        signedIn()
-        && (resource.data.clientId == request.auth.uid || resource.data.providerId == request.auth.uid)
-      );
-      allow delete: if esSoberano();
+      allow read, create, update, delete: if esSoberano();
     }
 
     match /notifications/{notificationId} {
