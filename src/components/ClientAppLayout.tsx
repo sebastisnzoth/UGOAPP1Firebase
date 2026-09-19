@@ -109,7 +109,7 @@ export default function ClientAppLayout({
     }
   };
 
-  let mapCenter = { lat: -34.6037, lng: -58.3816 };
+  let mapCenter = { lat: -27.5945, lng: -48.5477 };
   if (userLocation && Array.isArray(userLocation) && userLocation.length === 2) {
     const uLat = Number(userLocation[0]);
     const uLng = Number(userLocation[1]);
