@@ -228,7 +228,7 @@ export default function App() {
                 )}
               >
                 {activeView === 'wallet' && <WalletView userId={user.uid} />}
-                {activeView === 'calendar' && <CalendarView userId={user.uid} />}
+                {activeView === 'calendar' && <CalendarView userId={user.uid} role={userRole} />}
                 {activeView === 'history' && <ServiceHistory isOpen userId={user.uid} role={userRole} onClose={() => setActiveView('map')} />}
                 {activeView === 'profile' && <UserProfile isOpen userId={user.uid} onClose={() => setActiveView('map')} />}
                 {activeView === 'provider' && <ProviderDashboard providerId={user.uid} />}
